@@ -23,21 +23,35 @@ class ScalerSelector:
 
 # Class for Dataset 1
 class Dataset1:
+
+    """
+    Implementuje dane z badania:  "Artificial intelligence in breast cancer screening:
+                                   Primary care provider preferences" (2020-07-16)
+    Link: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EX4NG2
+    Badanie opini kobiet (dane ankietowe) na temat wykorzystania technogi AI podczas badań lekarskich.
+    """
     def __init__(self):
-        self.file_path = 'dataset1.csv'
+        self.file_path = r'data/Artificial_intelligence_in_breast_cancer_screening_Primary_care_provider_preferences/ai_pcp_processed-1.csv'
 
     def read_data(self):
-        return pd.read_csv(self.file_path)
+        return pd.read_csv(self.file_path, sep=',', header=0)
 
     def preprocess_data(self, scaler_type: str):
         data = self.read_data()
+        """
+        zmienna niezależna: "tech_negative"
+        0 - opinia nagatywna
+        1 - opinia pozytywna
+        """
+        # usunięcie kolumny identyfikującej uczestnika ankiety
+        data = data.drop('id', axis=1)
         X = data.drop('target', axis=1)
         y = data['target']
 
-        with ScalerSelector(scaler_type).get_scaler() as scaler:
-            X_scaled = scaler.fit_transform(X)
+        # dane nie wymagają standaryzacji ponieważ zawierają same wartości kategoryczne
+        # np. -1, 0, 1 (zmiana stosunku do rozwiązań AI), 15 (staż pracy lekarza prowadzącego badnie)
 
-        return X_scaled, y
+        return X, y
 
 
 # Class for Dataset 2

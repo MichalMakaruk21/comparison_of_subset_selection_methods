@@ -1,0 +1,105 @@
+id : 
+	unique ID number assigned to each participant
+
+task :
+	choice task number (each user responded to 15 tasks)
+
+option :
+	the option (of 3) described in that row; option 3 is always radiologist alone
+
+sens_89 :
+	effects coded value for sensitivity of 89%
+
+sens_94 :
+	effects coded value for sensitivity of 94%
+
+spec_89 :
+	effects coded value for specificity of 89%
+
+sens_94 :
+	effects coded value for specificity of 94%
+
+rad_part :
+	effects coded value for radiologist confirmation of likely positives only
+
+rad_all :
+	effects coded value for radiologist confirmation of all images
+
+evid_rct :
+	effects coded value for evidence claims supported by RCT
+
+evid_both :
+	effects coded value for evidence claims supported by observational study and RCT
+
+tran_part :
+	effects coded value for AI decisions understandable by AI experts only
+
+tran_full :
+	effects coded value for AI decision understandable by clinicians
+
+repr_med :
+	effects coded value for 75% of patients well represented in training data
+
+repr_high :
+	effects coded value for 100% of patients well represented in training data
+
+choice :
+	binary value reflecting choice for a given choice task
+	choices are "flattened" from the raw, two-stage data, thus the preferred AI
+	product is not recorded if the participant chose radiologist alone
+
+optout :
+	effects coded variable indicating option for radiologist alone
+
+practice_years :
+	self-reported years in medical practice
+
+female :
+	binary indicator of female sex
+
+indid :
+	choice task as numbered by entire dataset
+
+midwest :
+	binary indicator of residence in midwest region (reference category is west)
+
+northeast:
+	binary indicator of residence in northeast region (reference category is west)
+
+south :
+	binary indicator of residence in south region (reference category is west)
+
+urban :
+	binary indicator of practice in urban setting (RUCA < 5)
+
+tech_attitude_negative:
+	"Which of the following best describes your attitude toward new technology?"
+	1 =
+	I like new technologies and use them before most people I know -OR-
+	I love new technologies and am among the first to experiment with them
+ 	0 = 
+	I am skeptical about new technologies and only use them when I have to -OR-
+	I am usually one of the last people I know to use new technologies -OR-
+	I use technologies when people I know do
+	
+
+rad_contact_med_high:
+	"If you had a question about a radiology report, how easy would it be to reach the radiologists who interpret your patients' mammograms?"
+	1 = 
+	Very easy -OR-
+	Somewhat easy -OR-
+	Neither easy nor difficult
+	0 =
+	Somewhat difficult -OR-
+	Very difficult
+
+rad_trust:
+	"How much trust do you have in the radiologists who interpret your patients' mammograms?"
+	1 = 
+	Very high level of trust -OR-
+	Somewhat high level of trust -OR-
+	Moderate level of trust
+	0 =
+	Somewhat low level of trust -OR-
+	Very low level of trust
+
