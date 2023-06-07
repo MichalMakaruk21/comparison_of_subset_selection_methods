@@ -3,21 +3,25 @@ import numpy as np
 import re
 
 import data_operations as d
+import ML_operations as ml
 import matplotlib as plt
 d1 = d.DataSet1()
 d2 = d.DataSet2()
 d3 = d.DataSet3()
-d4 = d.Dataset4()
+d4 = d.DataSet4()
+
+fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
+    df = d1.preprocess_data(scaler_type='StandardScaler')
+    sub_df = fss.select_subset(df)
 
-    df = d4.preprocess_train_data(scaler_type='StandardScaler')
+    print(sub_df.columns)
+    print(sub_df.head())
 
-    # print(df.apply(lambda col: col.unique()))
-    # print(df.dtypes)
-    # print(df.describe())
+    """
     print(df)
 
     for x in df.columns:
@@ -38,7 +42,7 @@ if __name__ == '__main__':
 
     #for id ,val in zip(df.index, df['Attr63']):
     #   print(f'id: {id} val: {val}')
-
+"""
 
 """
 # -------------------------------

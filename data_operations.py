@@ -1,31 +1,8 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, Normalizer
+from sklearn.model_selection import train_test_split
 
-class ScaledDataFrameBuilder:
-    def get_df_from_preprocess_data(self,
-                                    x_scaled: pd.DataFrame(),
-                                    y: pd.DataFrame(),
-                                    columns: list) -> pd.DataFrame():
-        df = pd.DataFrame(data=x_scaled, columns=[x.strip() for x in columns])
-        df['y'] = y.tolist()
-        return df
-
-class ScalerSelector:
-    def __init__(self, scaler_type):
-        self.scaler_type = scaler_type
-
-    def get_scaler(self):
-        if self.scaler_type == 'StandardScaler':
-            return StandardScaler()
-        elif self.scaler_type == 'MinMaxScaler':
-            return MinMaxScaler()
-        elif self.scaler_type == 'RobustScaler':
-            return RobustScaler()
-        elif self.scaler_type == 'Normalizer':
-            return Normalizer(norm='l1')
-        else:
-            raise ValueError('Invalid scaler type specified.')
 
 class DataSet1:
     """
@@ -66,6 +43,7 @@ class DataSet1:
 
         return df
 
+
 class DataSet2:
     """
     Implementuje dane zbierane przez Sebastiana Tomczaka na przestrzeni 12 lat
@@ -99,6 +77,7 @@ class DataSet2:
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
 
         return df
+
 
 class DataSet3:
     """
@@ -147,6 +126,7 @@ class DataSet3:
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
 
         return df
+
 
 class DataSet4:
     """
@@ -225,3 +205,59 @@ class DataSet4:
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X_dummy.columns)
 
         return df
+
+
+class ScaledDataFrameBuilder:
+    def get_df_from_preprocess_data(self,
+                                    x_scaled: pd.DataFrame(),
+                                    y: pd.DataFrame(),
+                                    columns: list) -> pd.DataFrame():
+        df = pd.DataFrame(data=x_scaled, columns=[x.strip() for x in columns])
+        df['y'] = y.tolist()
+        return df
+
+
+class ScalerSelector:
+    def __init__(self, scaler_type):
+        self.scaler_type = scaler_type
+
+    def get_scaler(self):
+        if self.scaler_type == 'StandardScaler':
+            return StandardScaler()
+        elif self.scaler_type == 'MinMaxScaler':
+            return MinMaxScaler()
+        elif self.scaler_type == 'RobustScaler':
+            return RobustScaler()
+        elif self.scaler_type == 'Normalizer':
+            return Normalizer(norm='l1')
+        else:
+            raise ValueError('Invalid scaler type specified.')
+
+
+
+class DataSplitter:
+    """
+    Objective split parameter setter
+    """
+
+    def split_data(self, data_set: pd.DataFrame(),
+                   data_set_if_pre: pd.DataFrame() = None,
+                   test_size=0.2,
+                   random_state=21,
+                   pre_split=False):
+        if not pre_split:
+            X = data_set.drop(['y'], axis=1)
+            y = data_set['y']
+
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+            return X_train, X_test, y_train, y_test
+
+        elif pre_split:
+            X_train = data_set.drop(['y'], axis=1)
+            X_test = data_set_if_pre.drop(['y'], axis=1)
+            y_train = data_set['y']
+            y_test = data_set_if_pre['y']
+
+            return X_train, X_test, y_train, y_test
+        else:
+            raise ValueError(f'Incorrect parameters')
