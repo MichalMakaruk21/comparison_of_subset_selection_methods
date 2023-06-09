@@ -5,16 +5,14 @@ import numpy as np
 
 from IPython.display import display
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectFromModel, RFE
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LassoCV
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.inspection import permutation_importance
 import statsmodels.api as sm
 
-
+ds = do.DataSplitter()
 # class BestSubsetSelection:
 
 class ForwardStepwiseSelection:
@@ -56,9 +54,9 @@ class ForwardStepwiseSelection:
 
 
                 if self.model_criterion == "AIC":
-
+                    print('nie działa')
                 elif self.model_criterion == "BIC":
-
+                    print('nie działa')
                 else:
                     raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
 
@@ -81,12 +79,57 @@ class ForwardStepwiseSelection:
         final_df = data_set[selected_features].assign(y=y)
         return final_df
 
+    def evaluate_model(self, pre_splitted = False):
+        return 0
+
+
 # class BackwardStepwiseSelection:
 
 # class HybridStepwiseSelection:
 
-# class Lasso:
+class Lasso:
+    @staticmethod
+    def perform_lasso_logistic_regression(df: pd.DataFrame(),
+                                       df_pre_split: pd.DataFrame(),
+                                       pre_split=False):
+        if pre_split:
+            X_train, y_train, X_test, y_test = ds.split_data(data_set=df,
+                                                             data_set_if_pre=df_pre_split,
+                                                             pre_split=pre_split)
+            model = LogisticRegression(penalty='l1', solver='liblinear')
+            train = model.fit(X_test, y_test)
+
+        if not pre_split:
+            X_train, y_train, X_test, y_test = ds.split_data(data_set=df, pre_split=pre_split)
+            model = LogisticRegression(penalty='l1', solver='liblinear')
+
+            train = model.fit(X_test, y_test)
+
+
+
 
 # class KrossValidation:
 
 # class FeaturePermutation:
+
+
+class Metrics:
+    @staticmethod
+    def conf_matrix_related_metrics(train):
+
+        tn, fp, fn, tp = train.confusion_matrix().ravel()
+
+        metrics = {'recall': tp / (tp + fn),
+                   'precision': tp / (tp + fp),
+                   'swoistosc': tn / (tn / fp),
+                   'wartość_perd_nag': tn / (tn + fn),
+                   'accuracy': (tp + tn) / (tp + tn + fp + tn),
+                   'f1': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
+
+
+
+
+
+
+
+

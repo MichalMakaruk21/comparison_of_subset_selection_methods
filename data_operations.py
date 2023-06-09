@@ -239,8 +239,8 @@ class DataSplitter:
     """
     Objective split parameter setter
     """
-
-    def split_data(self, data_set: pd.DataFrame(),
+    @staticmethod
+    def split_data(data_set: pd.DataFrame(),
                    data_set_if_pre: pd.DataFrame() = None,
                    test_size=0.2,
                    random_state=21,
