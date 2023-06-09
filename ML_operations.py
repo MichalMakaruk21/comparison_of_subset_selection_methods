@@ -13,6 +13,8 @@ from sklearn.inspection import permutation_importance
 import statsmodels.api as sm
 
 ds = do.DataSplitter()
+
+
 # class BestSubsetSelection:
 
 class ForwardStepwiseSelection:
@@ -52,15 +54,12 @@ class ForwardStepwiseSelection:
                 else:
                     raise ValueError("Invalid feature criterion. Correct values: 'p-value' or 'pseudo-R-square'.")
 
-
                 if self.model_criterion == "AIC":
                     print('nie działa')
                 elif self.model_criterion == "BIC":
                     print('nie działa')
                 else:
                     raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
-
-
 
                 if self.model_criterion == 'AIC' and score < best_model_score:
                     best_model_score = score
@@ -74,12 +73,12 @@ class ForwardStepwiseSelection:
                     selected_features.append(feature)
                     remaining_features.remove(feature)
             print('working')
-                # else:
-                    # selected_features.remove(feature)
+            # else:
+            # selected_features.remove(feature)
         final_df = data_set[selected_features].assign(y=y)
         return final_df
 
-    def evaluate_model(self, pre_splitted = False):
+    def evaluate_model(self, pre_splitted=False):
         return 0
 
 
@@ -90,14 +89,17 @@ class ForwardStepwiseSelection:
 class Lasso:
     @staticmethod
     def perform_lasso_logistic_regression(df: pd.DataFrame(),
-                                       df_pre_split: pd.DataFrame(),
-                                       pre_split=False):
+                                          df_pre_split: pd.DataFrame(),
+                                          pre_split=False):
         if pre_split:
             X_train, y_train, X_test, y_test = ds.split_data(data_set=df,
                                                              data_set_if_pre=df_pre_split,
                                                              pre_split=pre_split)
             model = LogisticRegression(penalty='l1', solver='liblinear')
-            train = model.fit(X_test, y_test)
+            train = model.fit(X_train, y_train)
+
+            y_predict = train.predict(X_test)
+            Metrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
 
         if not pre_split:
             X_train, y_train, X_test, y_test = ds.split_data(data_set=df, pre_split=pre_split)
@@ -105,7 +107,9 @@ class Lasso:
 
             train = model.fit(X_test, y_test)
 
+            y_predict = train.predict(X_test)
 
+            Metrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
 
 
 # class KrossValidation:
@@ -115,21 +119,13 @@ class Lasso:
 
 class Metrics:
     @staticmethod
-    def conf_matrix_related_metrics(train):
+    def return_conf_matrix_related_metrics(y_test, y_predict):
+        tn, fp, fn, tp = confusion_matrix(y_true=y_predict, y_pred=y_predict).ravel()
 
-        tn, fp, fn, tp = train.confusion_matrix().ravel()
-
+        # sensitivity as well
         metrics = {'recall': tp / (tp + fn),
                    'precision': tp / (tp + fp),
-                   'swoistosc': tn / (tn / fp),
-                   'wartość_perd_nag': tn / (tn + fn),
+                   'specificity': tn / (tn / fp),
+                   'nagative_predictive_value': tn / (tn + fn),
                    'accuracy': (tp + tn) / (tp + tn + fp + tn),
-                   'f1': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
-
-
-
-
-
-
-
-
+                   'f1_score': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
