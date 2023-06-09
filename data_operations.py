@@ -15,6 +15,7 @@ class DataSet1:
     dane charkateryzują się transgforamcją danych katerorycznych na indeksy i
     np. -1, 0, 1 (zmiana stosunku do rozwiązań AI), 15 (staż pracy lekarza prowadzącego badnie)
     """
+
     def __init__(self):
         self.file_path = r'data/Artificial_intelligence_in_breast_cancer_screening_Primary_care_provider_preferences/ai_pcp_processed-1.csv'
 
@@ -54,6 +55,7 @@ class DataSet2:
 
     Wybrałem naliczeniejszy zbór danych, charakteyzujący się bankrupstwem po 3 latach działalności firmy
     """
+
     def __init__(self):
         self.file_path = 'data/Polish_companies_bankruptcy/polish_companies_bankruptcy_3.csv'
 
@@ -94,6 +96,7 @@ class DataSet3:
         -Cytology
         -Biopsy (wybrana jako zmienna niezależna dla moich badań)
     """
+
     def __init__(self):
         self.file_path = 'data/Cervical_cancer_Risk_Factors/risk_factors_cervical_cancer.csv'
 
@@ -141,6 +144,7 @@ class DataSet4:
     m.in. Masahiro Terabe and Takashi Washio and Hiroshi Motoda.
           The Effect of Subsampling Rate on S 3 Bagging Performance. Mitsubishi Research Institute.
     """
+
     def __init__(self):
         self.file_path_train_data = 'data/Census_Income_KDD_Prediction/census_income_data.csv'
         self.file_path_test_data = 'data/Census_Income_KDD_Prediction/census_income_test.csv'
@@ -159,10 +163,12 @@ class DataSet4:
                              'country_of_birth_self', 'citizenship', 'own_business_or_self_employed',
                              'fill_inc_questionnaire_for_veterans_admin', 'veterans_benefits', 'weeks_worked_in_year',
                              'year', 'income']
+
     def read_train_data(self):
         df = pd.read_csv(self.file_path_train_data, sep=',', names=self.column_names, header=0)
         df['income'] = df['income'].replace({' - 50000.': 0, ' 50000+.': 1})
         return df
+
     def read_test_data(self):
         df = pd.read_csv(self.file_path_test_data, sep=',', names=self.column_names, header=0)
         df['income'] = df['income'].replace({' - 50000.': 0, ' 50000+.': 1})
@@ -234,30 +240,43 @@ class ScalerSelector:
             raise ValueError('Invalid scaler type specified.')
 
 
-
 class DataSplitter:
     """
     Objective split parameter setter
     """
+
     @staticmethod
-    def split_data(data_set: pd.DataFrame(),
+    def split_data(data_set: pd.DataFrame() = None,
                    data_set_if_pre: pd.DataFrame() = None,
                    test_size=0.2,
                    random_state=21,
-                   pre_split=False):
+                   pre_split=False,
+                   dict_columns=None):
         if not pre_split:
-            X = data_set.drop(['y'], axis=1)
-            y = data_set['y']
+            X = np.array((data_set.drop(['y'], axis=1)))
+            y = np.array((data_set['y']))
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
             return X_train, X_test, y_train, y_test
 
         elif pre_split:
-            X_train = data_set.drop(['y'], axis=1)
-            X_test = data_set_if_pre.drop(['y'], axis=1)
-            y_train = data_set['y']
-            y_test = data_set_if_pre['y']
+            X_train = np.array(data_set.drop(['y'], axis=1))
+            X_test = np.array(data_set_if_pre.drop(['y'], axis=1))
+            y_train = np.array(data_set['y'])
+            y_test = np.array(data_set_if_pre['y'])
 
             return X_train, X_test, y_train, y_test
         else:
             raise ValueError(f'Incorrect parameters')
+
+        # connect somehow with returing columns
+    @staticmethod
+    def return_columns(data_set: pd.DataFrame(),
+                       data_set_if_pre: pd.DataFrame() = None,
+                       pre_split=False):
+
+        if not pre_split:
+            return {'columns': data_set.columns}
+        if pre_split:
+            return {'columns_train': data_set.columns,
+                    'columns_test': data_set_if_pre.columns}

@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import re
+from IPython.display import display
 
 import data_operations as d
 import ML_operations as ml
@@ -10,16 +11,19 @@ d2 = d.DataSet2()
 d3 = d.DataSet3()
 d4 = d.DataSet4()
 
+lasso = ml.Lasso()
+
 fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
     df = d1.preprocess_data(scaler_type='StandardScaler')
-    sub_df = fss.select_subset(df)
-
-    print(sub_df.columns)
-    print(sub_df.head())
+    # lasso_metrics = lasso.perform_lasso_logistic_regression(df=df, pre_split=False)
+    # sub_df = fss.select_subset(df)
+    display(lasso.perform_lasso_logistic_regression(df=df, pre_split=False))
+    # print(sub_df.columns)
+    # print(sub_df.head())
 
     """
     print(df)
