@@ -2,13 +2,13 @@ import data_operations as do
 import itertools
 import pandas as pd
 import numpy as np
-
+import sklearn
 from IPython.display import display
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectFromModel, RFE
 from sklearn.linear_model import LogisticRegression, LassoCV
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import KFold, cross_validate, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.inspection import permutation_importance
 import statsmodels.api as sm
@@ -117,14 +117,74 @@ class KrossValidation:
     """
     DataSet 4 is not supprted (pre_split from vendor)
     """
+
     @staticmethod
-    def perform_kross_validation_train():
+    def perform_kross_validation_train(df: pd.DataFrame()):
+        scoring = ['accuracy', 'precision', 'recall', 'f1']
 
-        return 0
+        X = df.drop(['y'], axis=1)
+        y = df['y']
+
+        model = LogisticRegression()
+
+        k_folds = KFold(n_splits=10)
+        # coud not find additonal liblaries
+        print(sklearn.metrics.get_scorer_names())
+        scores = cross_validate(model, X, y, cv=k_folds, scoring=scoring, return_train_score=True)
+        return {'accuracy': scores['test_accuracy'].mean(),
+                'precision': scores['test_precision'].mean(),
+                'recall': scores['test_recall'].mean(),
+                'f1': scores['test_f1'].mean()}
+
+
+class FeaturePermutation:
+    @staticmethod
+    def perform_selection_based_on_permutation(df: pd.DataFrame(),
+                                               df_pre_split: pd.DataFrame() = None,
+                                               pre_split=False):
+
+        if pre_split:
+            X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
+                                                             data_set_if_pre=df_pre_split,
+                                                             pre_split=pre_split)
+            model = LogisticRegression()
+            perm_imp = permutation_importance(model, X_test, y_test, n_repeats=30, random_state=42)
+            return
+
+        if not pre_split:
+            X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
+            df_columns = ds.return_columns(data_set=df, pre_split=False)
+
+            model = LogisticRegression()
+            train = model.fit(X_train, y_train)
+
+            y_predict = train.predict(X_test)
+            conf_matrix_metrics = Metrics().return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
+            print(conf_matrix_metrics)
+            orginal_accuracy = conf_matrix_metrics['accuracy']
+            orginal_f1 = conf_matrix_metrics['f1_score']
+
+            X_test_with_columns = pd.DataFrame(data=X_test, columns=df_columns)
+
+            result = permutation_importance(model, X_test, y_test, n_repeats=10, random_state=42)
+
+            # importance_scores = result.importances_mean
+            # for feature, importance_score in zip(range(X_test_with_columns.shape[1]), importance_scores):
+            #     print(f"Feature {feature}: {importance_score:.4f}")
+
+            feature_importance_df = pd.DataFrame(
+                {"Feature": range(X_test_with_columns.shape[1]), "Importance": result.importances_mean}
+            )
+
+            feature_importance_df = feature_importance_df[feature_importance_df['Importance'] > 0.05]
+
+            print(feature_importance_df)
 
 
 
-# class FeaturePermutation:
+            return "done"
+
+
 
 
 class Metrics:

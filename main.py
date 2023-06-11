@@ -12,8 +12,9 @@ d3 = d.DataSet3()
 d4 = d.DataSet4()
 
 lasso = ml.Lasso()
-
+kross_val = ml.KrossValidation()
 fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+feature_importance = ml.FeaturePermutation()
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -21,7 +22,9 @@ if __name__ == '__main__':
     df = d1.preprocess_data(scaler_type='StandardScaler')
     # lasso_metrics = lasso.perform_lasso_logistic_regression(df=df, pre_split=False)
     # sub_df = fss.select_subset(df)
-    display(lasso.perform_lasso_logistic_regression(df=df, pre_split=False))
+    # display(lasso.perform_lasso_logistic_regression(df=df, pre_split=False))
+    # display(kross_val.perform_kross_validation_train(df))
+    display(feature_importance.perform_selection_based_on_permutation(df, pre_split=False))
     # print(sub_df.columns)
     # print(sub_df.head())
 

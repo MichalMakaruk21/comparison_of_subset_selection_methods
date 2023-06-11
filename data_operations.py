@@ -276,7 +276,7 @@ class DataSplitter:
                        pre_split=False):
 
         if not pre_split:
-            return {'columns': data_set.columns}
+            return list(data_set.columns[:-1])
         if pre_split:
             return {'columns_train': data_set.columns,
                     'columns_test': data_set_if_pre.columns}
