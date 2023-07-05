@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, Normalizer
 from sklearn.model_selection import train_test_split
-
+import itertools
 
 class DataSet1:
     """
@@ -115,7 +115,7 @@ class DataSet3:
         # ma również braki w reszcie rekorów dotyczących STD)
         data = data.replace('?', np.nan).dropna(axis=0)
 
-        # usunięcie innych zmiennych objaśnianych
+        # usunięcie innych potencjalnych zmiennych objaśnianych
         data = data.drop(['Hinselmann',
                           'Schiller',
                           'Citology'], axis=1)
@@ -270,6 +270,7 @@ class DataSplitter:
             raise ValueError(f'Incorrect parameters')
 
         # connect somehow with returing columns
+
     @staticmethod
     def return_columns(data_set: pd.DataFrame(),
                        data_set_if_pre: pd.DataFrame() = None,
@@ -280,3 +281,21 @@ class DataSplitter:
         if pre_split:
             return {'columns_train': data_set.columns,
                     'columns_test': data_set_if_pre.columns}
+
+
+class SubDataFrameGenerator:
+
+    @staticmethod
+    def generate_combinations(df):
+        feature_columns = list(df.columns)
+        feature_columns.remove('y')
+        combinations = list(itertools.combinations(feature_columns, 5))
+        combinations = [list(combination) + ['y'] for combination in combinations]
+
+        return combinations
+
+    @staticmethod
+    def return_sub_df(df: pd.DataFrame(),
+                      combination: list):
+        df_5var = df[combination]
+        return df_5var

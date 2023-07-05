@@ -2,14 +2,18 @@ import pandas as pd
 import numpy as np
 import re
 from IPython.display import display
+import itertools
 
 import data_operations as d
 import ML_operations as ml
 import matplotlib as plt
+
 d1 = d.DataSet1()
 d2 = d.DataSet2()
 d3 = d.DataSet3()
 d4 = d.DataSet4()
+
+comb_generator = d.SubDataFrameGenerator()
 
 lasso = ml.Lasso()
 kross_val = ml.KrossValidation()
@@ -19,14 +23,21 @@ feature_importance = ml.FeaturePermutation()
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
-    df = d1.preprocess_data(scaler_type='StandardScaler')
-    # lasso_metrics = lasso.perform_lasso_logistic_regression(df=df, pre_split=False)
-    # sub_df = fss.select_subset(df)
-    # display(lasso.perform_lasso_logistic_regression(df=df, pre_split=False))
-    # display(kross_val.perform_kross_validation_train(df))
-    display(feature_importance.perform_selection_based_on_permutation(df, pre_split=False))
-    # print(sub_df.columns)
-    # print(sub_df.head())
+    sample_dataset = d1.preprocess_data(scaler_type='StandardScaler')
+    # sample_dataset = d3.preprocess_data(scaler_type='StandardScaler')
+
+    # fss.select_subset(data_set=sample_dataset)
+
+    features_combination = comb_generator.generate_combinations(df=sample_dataset)
+    # display(features_combination_series)
+
+    for comb in features_combination:
+        sub_df = comb_generator.return_sub_df(df=sample_dataset, combination=comb)
+        df_logs = fss.select_subset(data_set=sub_df)
+        display(df_logs)
+
+
+
 
     """
     print(df)
@@ -71,3 +82,11 @@ if __name__ == '__main__':
             #     print(f'id: {id} val: {val}')
 
 # --------------------------------------"""
+
+# lasso_metrics = lasso.perform_lasso_logistic_regression(df=df, pre_split=False)
+# sub_df = fss.select_subset(df)
+# display(lasso.perform_lasso_logistic_regression(df=df, pre_split=False))
+# display(kross_val.perform_kross_validation_train(df))
+# display(feature_importance.perform_selection_based_on_permutation(df, pre_split=False))
+# print(sub_df.columns)
+# print(sub_df.head())
