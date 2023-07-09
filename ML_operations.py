@@ -30,13 +30,30 @@ class ForwardStepwiseSelection:
         self.model = None
         self.model_criterion = model_criterion
         self.feature_criterion = feature_criterion
+        self.logs_df = pd.DataFrame({"Model_criterion": [],
+                                     "Feature_criterion": [],
+                                     "Model_criterion_value": [],
+                                     "Selected_features": []})
+
+    def append_log(self,
+                   model_criterion: str,
+                   feature_criterion: str,
+                   model_criterion_value: float,
+                   selected_features: list) -> pd.DataFrame():
+
+        new_row = {"Model_criterion": model_criterion,
+                   "Feature_criterion": feature_criterion,
+                   "Model_criterion_value": model_criterion_value,
+                   "Selected_features": selected_features}
+
+        # self.logs_df = self.logs_df.append(new_row, ignore_index=True)
+        self.logs_df = pd.concat([self.logs_df, pd.DataFrame([new_row])], ignore_index=True)
+
+        return self.logs_df.sort_values(by=['Model_criterion_value'],
+                                        ascending=False) if model_criterion == "AIC" else self.logs_df.sort_values(
+            by=['Model_criterion_value'], ascending=False)
 
     def select_subset(self, data_set: pd.DataFrame()):
-
-        logs_df = {"Model_criterion": [],
-                   "Feature_criterion": [],
-                   "Model_criterion_value": [],
-                   "Selected_features": []}
 
         X = data_set.drop(['y'], axis=1)
         y = data_set['y']
@@ -44,11 +61,11 @@ class ForwardStepwiseSelection:
         selected_features = []
         remaining_features = list(X.columns)
 
-        best_model_score = np.nan
+        best_model_score = None
 
         while remaining_features:
 
-            best_feature_score = np.nan
+            best_feature_score = None
 
             X_subset_with_best_feature_added = []
 
@@ -61,75 +78,119 @@ class ForwardStepwiseSelection:
 
                 if self.feature_criterion == 'p-value':
                     score = result.pvalues[feature]
-                    if score > best_feature_score:
+
+                    if best_feature_score is None:
                         best_feature_score = score
                         X_subset_with_best_feature_added = X_subset
+
+                        # print(X_subset_with_best_feature_added)
+
+                    elif score < best_feature_score:
+                        best_feature_score = score
+                        X_subset_with_best_feature_added = X_subset
+
                     else:
-                        X_subset = X_subset.pop(-1)
+                        X_subset = X_subset[:-1]
 
                 elif self.feature_criterion == 'pseudo-R-square':
                     score = 1 - (result.llnull / result.llf)
-                    if score > best_feature_score:
+
+                    if best_feature_score is None:
+                        best_feature_score = score
+
+                    elif score > best_feature_score:
                         best_feature_score = score
                         X_subset_with_best_feature_added = X_subset
                     else:
-                        X_subset = X_subset.pop(-1)
+                        X_subset = X_subset[:-1]
                 else:
-                    print('Best possible feature acquired')
-# -----------loop exit---------
-            model_with_added_feature = sm.Logit(y, X_subset_with_best_feature_added)
-            result_with_added_feature = model_with_added_feature.fit(disp=False)
-            # ________________________________
+                    print('Set correct feature criterion parameter')
+                # -----------loop exit-----------------------------------------
 
-            log_likelihood = model_with_added_feature.loglike(result_with_added_feature.params)
+                model_with_added_feature = sm.Logit(y, X_subset_with_best_feature_added)
+                result_with_added_feature = model_with_added_feature.fit(disp=False)
+                # ________________________________
 
-            if self.model_criterion == "AIC":
-                AIC = (-2 * log_likelihood) + (2 * len(X_subset_with_best_feature_added))
-                if AIC < best_model_score:
-                    best_model_score = AIC
+                log_likelihood = model_with_added_feature.loglike(result_with_added_feature.params)
 
-                    selected_features.append(feature)
-                    remaining_features.remove(feature)
+                if self.model_criterion == "AIC":
+                    AIC = (-2 * log_likelihood) + (2 * len(X_subset_with_best_feature_added))
 
-                    logs_df = logs_df.append(pd.DataFrame([self.model_criterion,
-                                                           self.feature_criterion,
-                                                           AIC,
-                                                           X_subset_with_best_feature_added]), ignore_index=True)
-                    logs_df = logs_df.sort_values(by=['Model_criterion_value'], ascending=True)
+                    # assign first value to model score
+                    if best_model_score is None:
+                        best_model_score = AIC
 
+                        selected_features.append(feature)
+                        remaining_features.remove(feature)
+
+                        self.append_log(self.model_criterion,
+                                        self.feature_criterion,
+                                        AIC,
+                                        selected_features)
+
+                    elif AIC < best_model_score:
+                        best_model_score = AIC
+
+                        selected_features.append(feature)
+                        remaining_features.remove(feature)
+
+                        self.append_log(self.model_criterion,
+                                        self.feature_criterion,
+                                        AIC,
+                                        selected_features)
+                    else:
+                        print('Cannot select better subset AIC')
+                        remaining_features.remove(feature)
+
+                    # ________________________________________
+
+                elif self.model_criterion == "BIC":
+                    BIC = (-2 * log_likelihood) + (
+                            len(X_subset_with_best_feature_added) * math.log(len(X_subset_with_best_feature_added),
+                                                                             math.e))
+                    if best_model_score is None:
+                        best_model_score = BIC
+
+                        selected_features.append(feature)
+                        remaining_features.remove(feature)
+
+                        self.append_log(self.model_criterion,
+                                        self.feature_criterion,
+                                        BIC,
+                                        selected_features)
+
+                    elif BIC > best_model_score:
+                        best_model_score = BIC
+
+                        selected_features.append(feature)
+                        remaining_features.remove(feature)
+
+                        self.append_log(self.model_criterion,
+                                        self.feature_criterion,
+                                        BIC,
+                                        selected_features)
+
+                    else:
+                        print('Cannot select better subset')
+                        remaining_features.remove(feature)
+                        # __________________________
                 else:
-                    print('Cannot select better subset')
-                    break
-                # ________________________________________
-
-            elif self.model_criterion == "BIC":
-                BIC = (-2 * log_likelihood) + (len(X_subset_with_best_feature_added) * math.log(len(X_subset_with_best_feature_added), math.e))
-                if BIC > best_model_score:
-                    best_model_score = BIC
-
-                    selected_features.append(feature)
-                    remaining_features.remove(feature)
-
-                    logs_df = logs_df.append(pd.DataFrame([self.model_criterion,
-                                                           self.feature_criterion,
-                                                           BIC,
-                                                           X_subset_with_best_feature_added]), ignore_index=True)
-                    logs_df = logs_df.sort_values(by=['Model_criterion_value'], ascending=False)
-
-                else:
-                    print('Cannot select better subset')
-                    break
-                    # __________________________
-            else:
-               raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
+                    raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
 
             print('working')
             # else:
             # selected_features.remove(feature)
         # final_df = data_set[selected_features].assign(y=y)
 
-        return logs_df
+        return self.logs_df
 
+
+    def model_criterion(self, ):
+
+
+
+
+        return
     def evaluate_model(self, pre_splitted=False):
 
         return 0

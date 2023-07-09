@@ -36,6 +36,10 @@ if __name__ == '__main__':
         df_logs = fss.select_subset(data_set=sub_df)
         display(df_logs)
 
+    log = fss.logs_df
+
+    log.to_csv("fss_log.csv", sep="|")
+
 
 
 
