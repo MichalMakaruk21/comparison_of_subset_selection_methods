@@ -7,6 +7,7 @@ import itertools
 import data_operations as d
 import ML_operations as ml
 import matplotlib as plt
+import time
 
 d1 = d.DataSet1()
 d2 = d.DataSet2()
@@ -17,8 +18,9 @@ comb_generator = d.SubDataFrameGenerator()
 
 lasso = ml.Lasso()
 kross_val = ml.KrossValidation()
-fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+
 feature_importance = ml.FeaturePermutation()
+bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -28,17 +30,30 @@ if __name__ == '__main__':
 
     # fss.select_subset(data_set=sample_dataset)
 
-    features_combination = comb_generator.generate_combinations(df=sample_dataset)
+    # features_combination = comb_generator.generate_combinations(df=sample_dataset)
     # display(features_combination_series)
-
+    """
     for comb in features_combination:
         sub_df = comb_generator.return_sub_df(df=sample_dataset, combination=comb)
         df_logs = fss.select_subset(data_set=sub_df)
+        # df_logs = bss.select_subset(data_set=sub_df)
         display(df_logs)
+        """
 
-    log = fss.logs_df
+    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
 
-    log.to_csv("fss_log.csv", sep="|")
+    start = time.time()
+    print("forward selection start")
+
+    df_logs = fss.select_subset(data_set=sample_dataset)
+
+    # log = fss.logs_df
+
+    end = time.time()
+    print(f"Forward selection exec time: {end - start}")
+
+    df_logs.to_csv("fss_log.csv", sep="|")
 
 
 
