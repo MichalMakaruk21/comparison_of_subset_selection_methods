@@ -284,7 +284,9 @@ class DataSplitter:
 
 
 class SubDataFrameGenerator:
-
+    """
+    Temp solution for high memory usage in brute force method
+    """
     @staticmethod
     def generate_combinations(df):
         feature_columns = list(df.columns)

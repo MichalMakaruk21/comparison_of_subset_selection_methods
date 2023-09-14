@@ -9,6 +9,7 @@ import ML_operations as ml
 import matplotlib as plt
 import time
 
+# Instances of classes containing data
 d1 = d.DataSet1()
 d2 = d.DataSet2()
 d3 = d.DataSet3()
@@ -26,7 +27,10 @@ bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-v
 if __name__ == '__main__':
 
     sample_dataset = d1.preprocess_data(scaler_type='StandardScaler')
+    # sample_dataset = d2.preprocess_data(scaler_type='StandardScaler')
     # sample_dataset = d3.preprocess_data(scaler_type='StandardScaler')
+    sd_A = d4.preprocess_train_data(scaler_type='StandardScaler')
+    # sd_B = d4.preprocess_test_data(scaler_type='StandardScaler')
 
     # fss.select_subset(data_set=sample_dataset)
 
@@ -37,23 +41,32 @@ if __name__ == '__main__':
         sub_df = comb_generator.return_sub_df(df=sample_dataset, combination=comb)
         df_logs = fss.select_subset(data_set=sub_df)
         # df_logs = bss.select_subset(data_set=sub_df)
-        display(df_logs)
+        display(df_logs) 
         """
 
     # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
-    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
+    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
 
     start = time.time()
     print("forward selection start")
-
-    df_logs = fss.select_subset(data_set=sample_dataset)
-
+    # df_logs = fss.select_subset(data_set=sample_dataset)
     # log = fss.logs_df
+
+    # bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
+    # ll = bf.select_subset(sample_dataset)
+
+    #  bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
+    # ll = bf.select_subset(df=sd_A, df_pre_split=sd_B, pre_split=True)
+
+    for ds in ["d1", "d2", "d3"]:
+        x = eval(f"{ds}.preprocess_data(scaler_type='StandardScaler')")
+        ll = comb_generator.generate_combinations(x)
+        print(len(ll))
 
     end = time.time()
     print(f"Forward selection exec time: {end - start}")
-
-    df_logs.to_csv("fss_log.csv", sep="|")
+    # print(ll)
+    # df_logs.to_csv("fss_log.csv", sep="|")
 
 
 

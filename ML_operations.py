@@ -57,7 +57,8 @@ class ForwardStepwiseSelection:
         selected_features = []
         remaining_features = list(X.columns)
 
-        best_model_score = math.log(2*len(remaining_features))
+        # best_model_score = math.log(2*len(remaining_features))
+        best_model_score = 2 * len(remaining_features) if self.model_criterion == "AIC" else None
 
         # set as log(2 * k) in AIC
         # find best start val for BIC
@@ -134,7 +135,6 @@ class ForwardStepwiseSelection:
                     # -----------loop exit-----------------------------------------
 
             print('working')
-
         return self.logs_df
 
     def model_criterion_eval(self,
@@ -175,6 +175,7 @@ class ForwardStepwiseSelection:
                 remaining_features.remove(feature)
 
         elif self.model_criterion == "BIC":
+            # check if BIC calculates correctly
             BIC = (-2 * log_likelihood) + (
                     len(X_subset_with_best_feature_added) * math.log(len(X_subset_with_best_feature_added)))
             if best_model_score is None:
@@ -249,7 +250,7 @@ class BackwardStepwiseSelection:
         X = data_set.drop(['y'], axis=1)
         y = data_set['y']
 
-        selected_features = list(X.columns)
+        selected_features = []
         remaining_features = list(X.columns)
 
         # train initial model with all features
@@ -285,7 +286,7 @@ class BackwardStepwiseSelection:
                 for feature in remaining_features:
                     # remove returns null list
                     # ll = [x for x in selected_features if x != feature]
-                    X_subset = X[[x for x in selected_features if x != feature]]
+                    X_subset = X[[x for x in remaining_features if x != feature]]
                     display(f"y variable:\n {y}")
                     display(f"X variables:\n {X_subset}")
 
@@ -314,11 +315,11 @@ class BackwardStepwiseSelection:
                                                                                remaining_features=remaining_features,
                                                                                feature=feature)
 
-                            elif score > worst_feature_score:
+                            elif score < worst_feature_score:
                                 worst_feature_score = score
                                 X_subset_with_worst_feature_dropped = X_subset
 
-                                X_subset_with_best_feature_added, best_model_score, selected_features, \
+                                X_subset_with_worst_feature_dropped, best_model_score, selected_features, \
                                 remaining_features = self.model_criterion_eval(y=y,
                                                                                X_subset_with_worst_feature_dropped=X_subset_with_worst_feature_dropped,
                                                                                best_model_score=best_model_score,
@@ -384,7 +385,7 @@ class BackwardStepwiseSelection:
             if AIC < best_model_score:
                 best_model_score = AIC
 
-                selected_features.remove(feature)
+                selected_features.append(feature)
                 remaining_features.remove(feature)
 
                 self.append_log(self.model_criterion,
@@ -402,7 +403,7 @@ class BackwardStepwiseSelection:
             if BIC > best_model_score:
                 best_model_score = BIC
 
-                selected_features.remove(feature)
+                selected_features.append(feature)
                 remaining_features.remove(feature)
 
                 self.append_log(self.model_criterion,
@@ -520,6 +521,50 @@ class FeaturePermutation:
             print(feature_importance_df)
 
             return "done"
+
+class BruteForce:
+    """
+    feature criterion should be "pseudo_R_square" or "p_vlaue"
+    feed model only with variables which match feature criterion
+    Data set 4 cannot run due to lack of memeory
+    """
+    def __init__(self, feature_criterion: str, criterion_val=float):
+        self.feature_criterion = feature_criterion
+        self.criterion_val = criterion_val
+
+    def select_subset(self, df: pd.DataFrame()):
+
+        X_train, X_test, y_train, y_test = ds.split_data(data_set=df)
+
+        print(len(y_train))
+        init_model = sm.Logit(y_train, X_train)
+        init_result = init_model.fit(disp=False)
+        # print(len(X_train))
+        # print(len(y_train))
+        if self.feature_criterion == "p_value":
+            # scores_list = init_result.pvalues
+            print(init_result.pvalues)
+            print(sum(init_result.pvalues))
+            scores_list = [x for x in init_result.pvalues if x <= float(self.criterion_val)]
+
+            print(["{:.12f}".format(x) for x in init_result.pvalues])
+            print(scores_list)
+            return 0
+
+        if self.feature_criterion == "pseudo_R_square":
+            return 0
+
+
+"""
+        if feature_criterion == "pseudo_R":
+            return 0
+        else:
+            print('tmp')
+            # p_vlaue"
+            return 0
+            """
+
+
 
 
 class Metrics:
