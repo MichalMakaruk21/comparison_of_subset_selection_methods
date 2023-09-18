@@ -29,7 +29,7 @@ if __name__ == '__main__':
     sample_dataset = d1.preprocess_data(scaler_type='StandardScaler')
     # sample_dataset = d2.preprocess_data(scaler_type='StandardScaler')
     # sample_dataset = d3.preprocess_data(scaler_type='StandardScaler')
-    sd_A = d4.preprocess_train_data(scaler_type='StandardScaler')
+    # sd_A = d4.preprocess_train_data(scaler_type='StandardScaler')
     # sd_B = d4.preprocess_test_data(scaler_type='StandardScaler')
 
     # fss.select_subset(data_set=sample_dataset)
@@ -44,7 +44,7 @@ if __name__ == '__main__':
         display(df_logs) 
         """
 
-    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+
     # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
 
     start = time.time()
@@ -58,11 +58,14 @@ if __name__ == '__main__':
     #  bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
     # ll = bf.select_subset(df=sd_A, df_pre_split=sd_B, pre_split=True)
 
+    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+    fss.select_subset(sample_dataset)
+    """
     for ds in ["d1", "d2", "d3"]:
         x = eval(f"{ds}.preprocess_data(scaler_type='StandardScaler')")
         ll = comb_generator.generate_combinations(x)
         print(len(ll))
-
+"""
     end = time.time()
     print(f"Forward selection exec time: {end - start}")
     # print(ll)

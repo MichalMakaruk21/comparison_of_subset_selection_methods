@@ -49,35 +49,63 @@ class ForwardStepwiseSelection:
         self.logs_df = self.logs_df.sort_values(by=['Model_criterion_value'], ascending=False)
         return self.logs_df
 
-    def select_subset(self, data_set: pd.DataFrame()):
+    def select_subset(self, df: pd.DataFrame(),
+                      df_pre_split: pd.DataFrame() = None,
+                      pre_split: bool = None):
 
-        X = data_set.drop(['y'], axis=1)
-        y = data_set['y']
+        columns = ds.return_columns(data_set=df)
 
-        selected_features = []
-        remaining_features = list(X.columns)
+        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
+                                                         data_set_if_pre=df_pre_split,
+                                                         pre_split=pre_split)
 
+        init_best_feature, best_feature_score = Metrics.get_best_feature_criterion_for_init_model(X_train,
+                                                                                                  y_train,
+                                                                                                  self.feature_criterion)
+
+        selected_features = [X_train[init_best_feature]]
+        remaining_features = list(X_train.columns).remove(init_best_feature)
+
+        best_model_score = Metrics.count_model_criterion(X_train,
+                                                         y_train,
+                                                         self.model_criterion)
         # best_model_score = math.log(2*len(remaining_features))
-        best_model_score = 2 * len(remaining_features) if self.model_criterion == "AIC" else None
-
+        # best_model_score = 2 * len(remaining_features) if self.model_criterion == "AIC" else None
         # set as log(2 * k) in AIC
         # find best start val for BIC
 
         while remaining_features:
 
-            best_feature_score = 0 if self.feature_criterion == "pseudo-R-square" else None
+            feature, score = self.feature_criterion_eval(X_train,
+                                        y_train,
+                                        selected_features,
+                                        remaining_features)
 
+            X_subset_with_best_feature_added = X_train[selected_features + [feature]]
+
+            X_subset_with_best_feature_added, best_model_score, selected_features, \
+            remaining_features = self.model_criterion_eval(y=y_train,
+                                                           X_subset_with_best_feature_added=X_subset_with_best_feature_added,
+                                                           best_model_score=best_model_score,
+                                                           selected_features=selected_features,
+                                                           remaining_features=remaining_features,
+                                                           feature=feature)
+
+            print()
+            print(selected_features)
+            print(best_model_score)
+
+
+            # best_feature_score = 0 if self.feature_criterion == "pseudo-R-square" else None
+            """
             X_subset_with_best_feature_added = []
 
             for feature in remaining_features:
 
-                X_subset = X[selected_features + [feature]]
-
-                display(f"y variable:\n {y}")
-                display(f"X variables:\n {X_subset}")
+                X_subset = X_train[selected_features + [feature]]
 
                 try:
-                    model = sm.Logit(y, X_subset)
+                    model = sm.Logit(y_train, X_subset)
                     result = model.fit(disp=False)
                 except Exception as e:
                     print(f"Error occurred while training initial model: {e}")
@@ -92,7 +120,7 @@ class ForwardStepwiseSelection:
                             X_subset_with_best_feature_added = X_subset
 
                             X_subset_with_best_feature_added, best_model_score, selected_features, \
-                            remaining_features = self.model_criterion_eval(y=y,
+                            remaining_features = self.model_criterion_eval(y=y_train,
                                                                            X_subset_with_best_feature_added=X_subset_with_best_feature_added,
                                                                            best_model_score=best_model_score,
                                                                            selected_features=selected_features,
@@ -104,7 +132,7 @@ class ForwardStepwiseSelection:
                             X_subset_with_best_feature_added = X_subset
 
                             X_subset_with_best_feature_added, best_model_score, selected_features, \
-                            remaining_features = self.model_criterion_eval(y=y,
+                            remaining_features = self.model_criterion_eval(y=y_train,
                                                                            X_subset_with_best_feature_added=X_subset_with_best_feature_added,
                                                                            best_model_score=best_model_score,
                                                                            selected_features=selected_features,
@@ -122,7 +150,7 @@ class ForwardStepwiseSelection:
                             X_subset_with_best_feature_added = X_subset
 
                             X_subset_with_best_feature_added, best_model_score, selected_features, \
-                            remaining_features = self.model_criterion_eval(y=y,
+                            remaining_features = self.model_criterion_eval(y=y_train,
                                                                            X_subset_with_best_feature_added=X_subset_with_best_feature_added,
                                                                            best_model_score=best_model_score,
                                                                            selected_features=selected_features,
@@ -135,7 +163,43 @@ class ForwardStepwiseSelection:
                     # -----------loop exit-----------------------------------------
 
             print('working')
+            """
         return self.logs_df
+
+
+
+    def feature_criterion_eval(self,
+                               X_train: pd.DataFrame(),
+                               y_train: pd.DataFrame(),
+                               selected_features: list,
+                               remaining_features: list):
+
+        scores_dict = pd.DataFrame({"columns": [], "scores": []})
+        id_min = None
+
+        for feature in remaining_features:
+
+            X_subset = X_train[selected_features + [feature]]
+
+            model = sm.Logit(y_train, X_subset)
+            result = model.fit(disp=False)
+
+            if self.feature_criterion == "p-value":
+
+                scores_dict['columns'].append(feature)
+                scores_dict['scores'].append(result.pvalues[feature])
+
+            #__________________________________________#
+
+            elif self.feature_criterion == "pseudo_R_square":
+                score = 1 - (result.llnull / result.llf)
+                # TO DOOOOOOOO
+                id_min = "xdd"
+                return 0
+            id_min = scores_dict[['scores']].idmin(axis=0) if self.feature_criterion == "p-value" else "Pseudo_RSQUARE"
+
+        return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
+
 
     def model_criterion_eval(self,
                              y,
@@ -580,3 +644,45 @@ class Metrics:
                    'accuracy': (tp + tn) / (tp + tn + fp + tn),
                    'f1_score': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
         return metrics
+
+    @staticmethod
+    def get_best_feature_criterion_for_init_model(X_train: pd.DataFrame(),
+                                                  y_train: pd.DataFrame(),
+                                                  feature_criterion: str,):
+
+        scores_dict = pd.DataFrame({"columns": [], "scores": []})
+
+        model = sm.Logit(y_train, X_train)
+        result = model.fit(disp=False)
+
+
+        if feature_criterion == "p-value":
+
+            for feature, value in zip(X_train.columns, result.pvalues):
+                scores_dict['columns'].append(feature)
+                scores_dict['scores'].append(value)
+
+            id_min = scores_dict[['scores']].idmin(axis=0)
+            return scores_dict['columns'][id_min], scores_dict[['scores']][id_min]
+
+        elif feature_criterion == "pseudo_R_square":
+            score = 1 - (result.llnull / result.llf)
+            # TO DOOOOOOOO
+
+            return 0
+
+    @staticmethod
+    def count_model_criterion(X_train: pd.DataFrame(),
+                              y_train: pd.DataFrame(),
+                              model_criterion: str) -> float():
+
+        model = sm.Logit(y_train, X_train)
+        result = model.fit(disp=False)
+
+        log_likelihood = model.loglike(result.params)
+
+        if model_criterion == "AIC":
+            return (-2 * log_likelihood) + (2 * len(X_train))
+
+        elif model_criterion == 'BIC':
+            return (-2 * log_likelihood) + (len(X_train) * math.log(len(X_train)))

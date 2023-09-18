@@ -4,6 +4,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, No
 from sklearn.model_selection import train_test_split
 import itertools
 
+
 class DataSet1:
     """
     Implementuje dane z badania:  "Artificial intelligence in breast cancer screening:
@@ -250,14 +251,15 @@ class DataSplitter:
                    data_set_if_pre: pd.DataFrame() = None,
                    test_size=0.2,
                    random_state=21,
-                   pre_split=False,
-                   dict_columns=None):
+                   pre_split: bool = False,
+                   dict_columns: bool = False):
         if not pre_split:
             X = np.array((data_set.drop(['y'], axis=1)))
             y = np.array((data_set['y']))
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-            return X_train, X_test, y_train, y_test
+            return X_train, X_test, y_train, y_test, list(data_set.columns) if dict_columns is True\
+                else X_train, X_test, y_train, y_test
 
         elif pre_split:
             X_train = np.array(data_set.drop(['y'], axis=1))
@@ -265,7 +267,8 @@ class DataSplitter:
             y_train = np.array(data_set['y'])
             y_test = np.array(data_set_if_pre['y'])
 
-            return X_train, X_test, y_train, y_test
+            return X_train, X_test, y_train, y_test, list(data_set.columns) if dict_columns is True\
+                else X_train, X_test, y_train, y_test
         else:
             raise ValueError(f'Incorrect parameters')
 
@@ -287,6 +290,7 @@ class SubDataFrameGenerator:
     """
     Temp solution for high memory usage in brute force method
     """
+
     @staticmethod
     def generate_combinations(df):
         feature_columns = list(df.columns)
