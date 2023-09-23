@@ -18,7 +18,7 @@ d4 = d.DataSet4()
 comb_generator = d.SubDataFrameGenerator()
 
 lasso = ml.Lasso()
-kross_val = ml.KrossValidation()
+kross_val = ml.CrossValidation()
 
 feature_importance = ml.FeaturePermutation()
 bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
@@ -58,8 +58,13 @@ if __name__ == '__main__':
     #  bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
     # ll = bf.select_subset(df=sd_A, df_pre_split=sd_B, pre_split=True)
 
-    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
-    fss.select_subset(sample_dataset)
+    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+    # fss.select_subset(sample_dataset)
+
+    # bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
+    bf = ml.BruteForce(feature_criterion='pseudo_R_square', criterion_val='0.2')
+    bf.select_subset(df=sample_dataset)
+
     """
     for ds in ["d1", "d2", "d3"]:
         x = eval(f"{ds}.preprocess_data(scaler_type='StandardScaler')")
