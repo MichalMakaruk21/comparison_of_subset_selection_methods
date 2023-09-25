@@ -53,9 +53,7 @@ class ForwardStepwiseSelection:
                       df_pre_split: pd.DataFrame() = None,
                       pre_split: bool = None):
 
-        columns_1 = ds.return_columns(data_set=df)
-        print(f'columns len: {len(columns_1)}')
-        display(df['y'].head(20))
+        # print(f'columns len: {len(ds.return_columns(data_set=df))}')
 
         X_train, X_test, y_train, y_test, columns = ds.split_data(data_set=df,
                                                                   data_set_if_pre=df_pre_split,
@@ -65,12 +63,13 @@ class ForwardStepwiseSelection:
         init_best_feature_index = Metrics.get_best_feature_criterion_for_init_model(X_train,
                                                                                     y_train,
                                                                                     self.feature_criterion)
-        # must work on axis y
-        selected_features = [X_train[init_best_feature_index]]
-        print(selected_features)
-        print(f"X_train len: {len(X_train)}")
-        print([len(x) for x in X_train])
-        remaining_features = list(X_train.columns).remove(init_best_feature_index)
+
+        columns_idx = list(range(len(ds.return_columns(data_set=df))))
+        selected_features = [columns_idx[init_best_feature_index]]
+        remaining_features = list(filter(lambda idx: idx != init_best_feature_index, columns_idx))
+
+        print(f"columns indexes: {columns_idx}")
+
 
         best_model_score = Metrics.count_model_criterion(X_train,
                                                          y_train,
@@ -273,6 +272,9 @@ class ForwardStepwiseSelection:
             raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
 
         return X_subset_with_best_feature_added, best_model_score, selected_features, remaining_features
+
+
+    def x_set_selector(self, X_set=):
 
     def evaluate_model(self, pre_splitted=False):
 
@@ -599,9 +601,15 @@ class BruteForce:
         self.feature_criterion = feature_criterion
         self.criterion_val = criterion_val
 
-    def select_subset(self, df: pd.DataFrame()):
+    def select_subset(self,
+                      df: pd.DataFrame(),
+                      df_pre_split: pd.DataFrame() = None,
+                      pre_split=False
+                      ):
 
-        X_train, X_test, y_train, y_test = ds.split_data(data_set=df)
+        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
+                                                         data_set_if_pre=df_pre_split,
+                                                         pre_split=pre_split)
 
         model = sm.Logit(y_train, X_train)
         result = model.fit(disp=False)
@@ -644,6 +652,7 @@ class BruteForce:
             return 0
 
     def eval_model(self):
+
         return 0
 
 
@@ -672,7 +681,7 @@ class Metrics:
         result = model.fit(disp=False)
 
         if feature_criterion == "p-value":
-            print(f'results pvales len: {len(result.pvalues)}')
+            # print(f'results pvales len: {len(result.pvalues)}')
             min_id = np.argmin(result.pvalues)
 
 
@@ -700,3 +709,9 @@ class Metrics:
 
         elif model_criterion == 'BIC':
             return (-2 * log_likelihood) + (len(X_train) * math.log(len(X_train)))
+
+class StepwiseSelection:
+
+    def __init__(self):
+        pass
+
