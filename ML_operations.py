@@ -18,13 +18,62 @@ ds = do.DataSplitter()
 sub_df = do.SubDataFrameGenerator()
 
 
-class ForwardStepwiseSelection:
+class StepwiseSelection(object):
+    def __init__(self, model_criterion: str, feature_criterion=str()):
+        self.model = None
+        self.model_criterion = model_criterion
+        self.feature_criterion = feature_criterion
+
+    def get_best_feature_criterion_for_init_model(self,
+                                                  X_train: list,
+                                                  y_train: list,
+                                                  feature_criterion: str, ):
+
+        model = sm.Logit(y_train, X_train)
+        result = model.fit(disp=False)
+
+        if feature_criterion == "p-value":
+            # print(f'results pvales len: {len(result.pvalues)}')
+            min_id = np.argmin(result.pvalues)
+
+            return np.argmin(result.pvalues)
+
+        elif feature_criterion == "pseudo_R_square":
+            score = 1 - (result.llnull / result.llf)
+            # TO DOOOOOOOO
+
+            return 0
+    def count_model_criterion(self,
+                              X_train: pd.DataFrame(),
+                              y_train: pd.DataFrame(),
+                              selected_features: list,
+                              model_criterion: str) -> float():
+        X_train = X_train[:, selected_features]
+
+        model = sm.Logit(y_train, X_train)
+        result = model.fit(disp=False)
+
+        log_likelihood = model.loglike(result.params)
+
+        if model_criterion == "AIC":
+            return (-2 * log_likelihood) + (2 * len(X_train))
+
+        elif model_criterion == 'BIC':
+            return (-2 * log_likelihood) + (len(X_train) * math.log(len(X_train)))
+
+    def select_based_on_idx(self,
+                            x_set: np.array,
+                            feature_list: list):
+
+        return x_set[:, feature_list]
+class ForwardStepwiseSelection(StepwiseSelection):
     """
     model criteria: AIC or BIC
     feature criteria: p-value or pseudo-R-square
     """
 
     def __init__(self, model_criterion: str, feature_criterion=str()):
+        super().__init__(model_criterion, feature_criterion)
         self.model = None
         self.model_criterion = model_criterion
         self.feature_criterion = feature_criterion
@@ -60,7 +109,7 @@ class ForwardStepwiseSelection:
                                                                   pre_split=pre_split,
                                                                   dict_columns=True)
 
-        init_best_feature_index = Metrics.get_best_feature_criterion_for_init_model(X_train,
+        init_best_feature_index = super().get_best_feature_criterion_for_init_model(X_train,
                                                                                     y_train,
                                                                                     self.feature_criterion)
 
@@ -70,10 +119,11 @@ class ForwardStepwiseSelection:
 
         print(f"columns indexes: {columns_idx}")
 
-
-        best_model_score = Metrics.count_model_criterion(X_train,
+        best_model_score = super().count_model_criterion(X_train,
                                                          y_train,
+                                                         selected_features,
                                                          self.model_criterion)
+        print(best_model_score)
         # best_model_score = math.log(2*len(remaining_features))
         # best_model_score = 2 * len(remaining_features) if self.model_criterion == "AIC" else None
         # set as log(2 * k) in AIC
@@ -179,16 +229,17 @@ class ForwardStepwiseSelection:
         id_min = None
 
         for feature in remaining_features:
-
-            X_subset = X_train[selected_features + [feature]]
+            X_subset = super().select_based_on_idx(x_set=X_train, feature_list=selected_features+[feature])
 
             model = sm.Logit(y_train, X_subset)
             result = model.fit(disp=False)
 
             if self.feature_criterion == "p-value":
 
-                scores_dict['columns'].append(feature)
-                scores_dict['scores'].append(result.pvalues[feature])
+                scores_dict._append([feature, result.pvalues[feature]], ignore_index=True)
+                print(scores_dict)
+                # scores_dict['columns'].append(feature)
+                # scores_dict['scores'].append(result.pvalues[feature])
 
             # __________________________________________#
 
@@ -274,7 +325,7 @@ class ForwardStepwiseSelection:
         return X_subset_with_best_feature_added, best_model_score, selected_features, remaining_features
 
 
-    def x_set_selector(self, X_set=):
+    # def x_set_selector(self, X_set=):
 
     def evaluate_model(self, pre_splitted=False):
 
@@ -670,48 +721,4 @@ class Metrics:
                    'f1_score': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
         return metrics
 
-    @staticmethod
-    def get_best_feature_criterion_for_init_model(X_train: list,
-                                                  y_train: list,
-                                                  feature_criterion: str, ):
-
-        scores_dict = pd.DataFrame({"columns": [], "scores": []})
-
-        model = sm.Logit(y_train, X_train)
-        result = model.fit(disp=False)
-
-        if feature_criterion == "p-value":
-            # print(f'results pvales len: {len(result.pvalues)}')
-            min_id = np.argmin(result.pvalues)
-
-
-
-            return np.argmin(result.pvalues)
-
-        elif feature_criterion == "pseudo_R_square":
-            score = 1 - (result.llnull / result.llf)
-            # TO DOOOOOOOO
-
-            return 0
-
-    @staticmethod
-    def count_model_criterion(X_train: pd.DataFrame(),
-                              y_train: pd.DataFrame(),
-                              model_criterion: str) -> float():
-
-        model = sm.Logit(y_train, X_train)
-        result = model.fit(disp=False)
-
-        log_likelihood = model.loglike(result.params)
-
-        if model_criterion == "AIC":
-            return (-2 * log_likelihood) + (2 * len(X_train))
-
-        elif model_criterion == 'BIC':
-            return (-2 * log_likelihood) + (len(X_train) * math.log(len(X_train)))
-
-class StepwiseSelection:
-
-    def __init__(self):
-        pass
 
