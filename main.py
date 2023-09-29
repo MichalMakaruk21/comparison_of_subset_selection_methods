@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
 
     start = time.time()
-    print("forward selection start")
+    print("Pipeline start")
     # df_logs = fss.select_subset(data_set=sample_dataset)
     # log = fss.logs_df
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
         print(len(ll))
 """
     end = time.time()
-    print(f"Forward selection exec time: {end - start}")
+    print(f"Pipeline exec time: {end - start}")
     # print(ll)
     # df_logs.to_csv("fss_log.csv", sep="|")
 
