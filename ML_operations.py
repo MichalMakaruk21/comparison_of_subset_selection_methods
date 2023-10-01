@@ -29,11 +29,39 @@ class StepwiseSelection(object):
     def get_best_feature_criterion_for_init_model(self,
                                                   X_train: list,
                                                   y_train: list,
-                                                  feature_criterion: str, ):
+                                                  feature_criterion: str):
 
-        model = sm.Logit(y_train, X_train)
-        result = model.fit(disp=False)
+        scores_dict = pd.DataFrame({"columns": [], "scores": []})
 
+        print(X_train[0][0])
+
+        columns_idx = [x for x in range(X_train[0])]
+
+        for feature in columns_idx:
+            X_subset = self.select_based_on_idx(x_set=X_train, feature_list=[feature])
+
+            model = sm.Logit(y_train, X_subset)
+            result = model.fit(disp=False)
+
+            new_row = {"columns": feature, "scores": result.pvalues[-1]}
+
+            # (f"feature p_val:  {result.pvalues[-1]}")
+
+            new_row_df = pd.DataFrame([new_row])
+
+            scores_dict = pd.concat([scores_dict, new_row_df], ignore_index=True)
+
+        print(scores_dict)
+
+        id_min = scores_dict['scores'].idxmin(axis=0) if self.feature_criterion == "p-value" else "Pseudo_RSQUARE"
+        print(scores_dict)
+        print(id_min)
+        return scores_dict['columns'][id_min]
+
+
+
+
+    """
         if feature_criterion == "p-value":
             # print(f'results pvales len: {len(result.pvalues)}')
             min_id = np.argmin(result.pvalues)
@@ -44,14 +72,15 @@ class StepwiseSelection(object):
             score = 1 - (result.llnull / result.llf)
             # TO DOOOOOOOO
 
-            return 0
+          
+    """
     def count_model_criterion(self,
-                              X_train: pd.DataFrame(),
-                              y_train: pd.DataFrame(),
+                              X_train: list,
+                              y_train: list,
                               selected_features: list,
                               model_criterion: str) -> float():
-
-        print(len(X_train[0]))
+        print(f"X_train set: {X_train}")
+        # print(len(X_train[0]))
         X_train = self.select_based_on_idx(X_train,
                                            selected_features)
 
@@ -70,7 +99,10 @@ class StepwiseSelection(object):
                             x_set: np.array,
                             feature_list: list):
         feature_list = list(map(int, feature_list))
-        return x_set[:, feature_list]
+        print(f"feature list: {feature_list}")
+        cut_array = x_set[:, feature_list]
+        print(f"X_train, selected using indexes: {cut_array}")
+        return cut_array
 class ForwardStepwiseSelection(StepwiseSelection):
     """
     model criteria: AIC or BIC
@@ -128,10 +160,11 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                          y_train,
                                                          selected_features,
                                                          self.model_criterion)
-        print(best_model_score)
+        print(f"init best model score: {best_model_score}")
 
+        count_while = 0
         while remaining_features:
-
+            count_while += 1
             feature, score = self.feature_criterion_eval(X_train,
                                                          y_train,
                                                          selected_features,
@@ -145,6 +178,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                                                                 selected_features=selected_features,
                                                                                                 remaining_features=remaining_features,
                                                                                                 feature=feature)
+
+            print(f"count while: {count_while}")
 
             print()
             print(selected_features)
@@ -234,13 +269,14 @@ class ForwardStepwiseSelection(StepwiseSelection):
             # print(f"remaining_features: {remaining_features}")
 
             X_subset = super().select_based_on_idx(x_set=X_train, feature_list=selected_features+[feature])
-
+            print(f"X_train feature criterion eval: {X_subset}")
+            print(f"len of x_subset in feature criterion: {len(X_train[0])}")
             model = sm.Logit(y_train, X_subset)
             result = model.fit(disp=False)
 
             if self.feature_criterion == "p-value":
 
-                print(f"p_sores: {result.pvalues}")
+                # print(f"p_sores: {result.pvalues}")
 
                 new_row = {"columns": feature, "scores": result.pvalues[-1]}
 
@@ -275,16 +311,13 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         test_feature_set = selected_features + [feature]
 
-        print(test_feature_set)
-        print(len(X_train[0]))
-
-        # X_train = super().select_based_on_idx(X_train,
-        #                                       test_feature_set)
+        print(f"mc features set: {test_feature_set}")
 
         model_criterion_val = super().count_model_criterion(X_train,
                                                             y,
                                                             test_feature_set,
                                                             self.model_criterion)
+        print(f"model criterion: {model_criterion_val}")
 
         if self.model_criterion == "AIC":
 
@@ -330,7 +363,6 @@ class ForwardStepwiseSelection(StepwiseSelection):
     def evaluate_model(self, pre_splitted=False):
 
         return 0
-
 
 class BackwardStepwiseSelection:
     """
@@ -708,6 +740,8 @@ class BruteForce:
 
 
 class Metrics:
+
+    # nie udawaj że tego nie ma  w biblotece
     @staticmethod
     def return_conf_matrix_related_metrics(y_test, y_predict):
         tn, fp, fn, tp = confusion_matrix(y_true=y_test, y_pred=y_predict).ravel()
