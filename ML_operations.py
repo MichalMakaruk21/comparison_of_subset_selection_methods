@@ -105,18 +105,6 @@ class StepwiseSelection(object):
         return self.logs_df
 
 
-"""
-    def evaluate_model(self):
-        
-        best_subset, data_set = self.logs_df["Selected_features"][-1]
-
-        print("model eval")
-        print(best_subset)
-
-        return best_subset
-"""
-
-
 class ForwardStepwiseSelection(StepwiseSelection):
     """
     model criteria: AIC, BIC, pseudo_R_square
@@ -144,23 +132,23 @@ class ForwardStepwiseSelection(StepwiseSelection):
         init_best_feature_index = super().get_best_feature_criterion_for_init_model(X_train,
                                                                                     y_train)
 
-        print(f"init variable: {init_best_feature_index}")
+        # print(f"init variable: {init_best_feature_index}")
 
         columns_idx = list(range(len(ds.return_columns(data_set=df))))
         selected_features = [columns_idx[int(init_best_feature_index)]]
         remaining_features = list(filter(lambda idx: idx != init_best_feature_index, columns_idx))
 
-        print(f"columns indexes: {columns_idx}")
+        # print(f"columns indexes: {columns_idx}")
 
         best_model_score = super().count_model_criterion(X_train,
                                                          y_train,
                                                          selected_features,
                                                          self.model_criterion)
-        print(f"init best model score: {best_model_score}")
+        # print(f"init best model score: {best_model_score}")
 
         while remaining_features:
-            print(f"selected features: {selected_features}")
-            print(f"remaining features: {remaining_features}")
+            # print(f"selected features: {selected_features}")
+            # print(f"remaining features: {remaining_features}")
 
             feature, score = self.feature_criterion_eval(X_train,
                                                          y_train,
@@ -176,8 +164,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                                                                 remaining_features=remaining_features,
                                                                                                 feature=feature)
 
-            print(selected_features)
-            print(best_model_score)
+            # print(selected_features)
+            # print(best_model_score)
 
             # best_feature_score = 0 if self.feature_criterion == "pseudo-R-square" else None
             """
@@ -247,7 +235,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
             print('working')
             """
-            print(f"selected_features: {selected_features}")
+            # print(f"selected_features: {selected_features}")
         return X_train, X_test, y_train, y_test
 
     def feature_criterion_eval(self,
@@ -273,8 +261,6 @@ class ForwardStepwiseSelection(StepwiseSelection):
                 result = model.fit(disp=False)
             except Exception:
                 temp_df = pd.DataFrame(data=X_subset, columns=selected_features + [int(feature)])
-                print("tu się wyjebało")
-                print(temp_df)
                 print(temp_df.describe())
                 print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
 
@@ -291,8 +277,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
         # pd.set_option('display.float_format', '{:.2f}'.format)
 
         id_min = scores_dict['scores'].idxmin(axis=0)
-        print(scores_dict)
-        print(id_min)
+        # print(scores_dict)
+        # print(id_min)
         return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
 
     def model_criterion_eval(self,
@@ -306,13 +292,13 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         test_feature_set = selected_features + [int(feature)]
 
-        print(f"mc features set: {test_feature_set}")
+        # (f"mc features set: {test_feature_set}")
 
         model_criterion_val = super().count_model_criterion(X_train,
                                                             y,
                                                             test_feature_set,
                                                             self.model_criterion)
-        print(f"model criterion: {model_criterion_val}")
+        # (f"model criterion: {model_criterion_val}")
 
         if self.model_criterion == "AIC":
 
@@ -381,7 +367,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
             else self.logs_df["Model_criterion_value"].idxmin()
         ]
 
-        print(best_subset)
+        print(f"best_subset: {best_subset}")
 
         X_train = super().select_based_on_idx(X_train, best_subset)
         X_test = super().select_based_on_idx(X_test, best_subset)
