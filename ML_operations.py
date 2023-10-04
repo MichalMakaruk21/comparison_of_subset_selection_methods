@@ -54,8 +54,7 @@ class StepwiseSelection(object):
     def count_model_criterion(self,
                               X_train: list,
                               y_train: list,
-                              selected_features: list,
-                              model_criterion: str) -> float():
+                              selected_features: list) -> float():
         """
         model criterion:
         AIC,
@@ -142,8 +141,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         best_model_score = super().count_model_criterion(X_train,
                                                          y_train,
-                                                         selected_features,
-                                                         self.model_criterion)
+                                                         selected_features)
         # print(f"init best model score: {best_model_score}")
 
         while remaining_features:
@@ -167,74 +165,6 @@ class ForwardStepwiseSelection(StepwiseSelection):
             # print(selected_features)
             # print(best_model_score)
 
-            # best_feature_score = 0 if self.feature_criterion == "pseudo-R-square" else None
-            """
-            X_subset_with_best_feature_added = []
-
-            for feature in remaining_features:
-
-                X_subset = X_train[selected_features + [feature]]
-
-                try:
-                    model = sm.Logit(y_train, X_subset)
-                    result = model.fit(disp=False)
-                except Exception as e:
-                    print(f"Error occurred while training initial model: {e}")
-                    remaining_features.remove(feature)
-                    continue
-                else:
-                    if self.feature_criterion == 'p-value':
-                        score = result.pvalues[feature]
-
-                        if best_feature_score is None:
-                            best_feature_score = score
-                            X_subset_with_best_feature_added = X_subset
-
-                            X_subset_with_best_feature_added, best_model_score, selected_features, \
-                            remaining_features = self.model_criterion_eval(y=y_train,
-                                                                           X_subset_with_best_feature_added=X_subset_with_best_feature_added,
-                                                                           best_model_score=best_model_score,
-                                                                           selected_features=selected_features,
-                                                                           remaining_features=remaining_features,
-                                                                           feature=feature)
-
-                        elif score < best_feature_score:
-                            best_feature_score = score
-                            X_subset_with_best_feature_added = X_subset
-
-                            X_subset_with_best_feature_added, best_model_score, selected_features, \
-                            remaining_features = self.model_criterion_eval(y=y_train,
-                                                                           X_subset_with_best_feature_added=X_subset_with_best_feature_added,
-                                                                           best_model_score=best_model_score,
-                                                                           selected_features=selected_features,
-                                                                           remaining_features=remaining_features,
-                                                                           feature=feature)
-                        else:
-                            X_subset = X_subset[:-1]
-
-                    elif self.feature_criterion == 'pseudo-R-square':
-
-                        score = 1 - (result.llnull / result.llf)
-
-                        if score > best_feature_score:
-                            best_feature_score = score
-                            X_subset_with_best_feature_added = X_subset
-
-                            X_subset_with_best_feature_added, best_model_score, selected_features, \
-                            remaining_features = self.model_criterion_eval(y=y_train,
-                                                                           X_subset_with_best_feature_added=X_subset_with_best_feature_added,
-                                                                           best_model_score=best_model_score,
-                                                                           selected_features=selected_features,
-                                                                           remaining_features=remaining_features,
-                                                                           feature=feature)
-                        else:
-                            X_subset = X_subset[:-1]
-                    else:
-                        print('Set correct feature criterion parameter')
-                    # -----------loop exit-----------------------------------------
-
-            print('working')
-            """
             # print(f"selected_features: {selected_features}")
         return X_train, X_test, y_train, y_test
 
@@ -296,8 +226,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         model_criterion_val = super().count_model_criterion(X_train,
                                                             y,
-                                                            test_feature_set,
-                                                            self.model_criterion)
+                                                            test_feature_set)
         # (f"model criterion: {model_criterion_val}")
 
         if self.model_criterion == "AIC":
