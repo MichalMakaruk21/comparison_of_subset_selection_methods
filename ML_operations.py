@@ -105,6 +105,18 @@ class StepwiseSelection(object):
         return self.logs_df
 
 
+"""
+    def evaluate_model(self):
+        
+        best_subset, data_set = self.logs_df["Selected_features"][-1]
+
+        print("model eval")
+        print(best_subset)
+
+        return best_subset
+"""
+
+
 class ForwardStepwiseSelection(StepwiseSelection):
     """
     model criteria: AIC, BIC, pseudo_R_square
@@ -117,7 +129,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
         self.model_criterion = model_criterion
         self.feature_criterion = feature_criterion
 
-    def select_subset(self, df: pd.DataFrame(),
+    def select_subset(self,
+                      df: pd.DataFrame(),
                       df_pre_split: pd.DataFrame() = None,
                       pre_split: bool = None):
 
@@ -145,12 +158,10 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                          self.model_criterion)
         print(f"init best model score: {best_model_score}")
 
-        count_while = 0
         while remaining_features:
             print(f"selected features: {selected_features}")
             print(f"remaining features: {remaining_features}")
 
-            count_while += 1
             feature, score = self.feature_criterion_eval(X_train,
                                                          y_train,
                                                          selected_features,
@@ -165,9 +176,6 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                                                                 remaining_features=remaining_features,
                                                                                                 feature=feature)
 
-            print(f"count while: {count_while}")
-
-            print()
             print(selected_features)
             print(best_model_score)
 
@@ -240,7 +248,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
             print('working')
             """
             print(f"selected_features: {selected_features}")
-        return self.logs_df
+        return X_train, X_test, y_train, y_test
 
     def feature_criterion_eval(self,
                                X_train: pd.DataFrame(),
@@ -354,15 +362,41 @@ class ForwardStepwiseSelection(StepwiseSelection):
                 remaining_features.remove(feature)
 
         else:
-            raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
+            raise ValueError("Invalid stopping criterion. Correct values: 'AIC', 'BIC' or pseudo_R_square.")
 
         return best_model_score, selected_features, remaining_features
 
-    # def x_set_selector(self, X_set=):
+    def evaluate_model(self,
+                       df: pd.DataFrame(),
+                       df_pre_split: pd.DataFrame() = None,
+                       pre_split: bool = None):
 
-    def evaluate_model(self, pre_splitted=False):
+        X_train, X_test, y_train, y_test = self.select_subset(df=df,
+                                                              df_pre_split=df_pre_split,
+                                                              pre_split=pre_split)
 
-        return 0
+        best_subset = self.logs_df["Selected_features"].loc[
+            self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
+                                                                  0] == "pseudo_R_square"
+            else self.logs_df["Model_criterion_value"].idxmin()
+        ]
+
+        print(best_subset)
+
+        X_train = super().select_based_on_idx(X_train, best_subset)
+        X_test = super().select_based_on_idx(X_test, best_subset)
+
+        model = LogisticRegression(solver='liblinear')
+        model.fit(X_train, y_train)
+
+        y_predict = model.predict(X_test)
+
+        tn, fp, fn, tp = confusion_matrix(y_true=y_test, y_pred=y_predict).ravel()
+
+        return SelectedMetrics.return_conf_matrix_related_metrics(tn=tn,
+                                                                  fp=fp,
+                                                                  fn=fn,
+                                                                  tp=tp)
 
 
 class BackwardStepwiseSelection:
@@ -591,7 +625,7 @@ class Lasso:
             train = model.fit(X_train, y_train)
 
             y_predict = train.predict(X_test)
-            return Metrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
+            return SelectedMetrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
 
         if not pre_split:
             X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
@@ -601,7 +635,7 @@ class Lasso:
 
             y_predict = train.predict(X_test)
 
-            return Metrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
+            return SelectedMetrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
 
 
 class CrossValidation:
@@ -650,7 +684,8 @@ class FeaturePermutation:
             train = model.fit(X_train, y_train)
 
             y_predict = train.predict(X_test)
-            conf_matrix_metrics = Metrics().return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
+            conf_matrix_metrics = SelectedMetrics().return_conf_matrix_related_metrics(y_test=y_test,
+                                                                                       y_predict=y_predict)
             print(conf_matrix_metrics)
             orginal_accuracy = conf_matrix_metrics['accuracy']
             orginal_f1 = conf_matrix_metrics['f1_score']
@@ -739,13 +774,11 @@ class BruteForce:
         return 0
 
 
-class Metrics:
+class SelectedMetrics:
 
     # nie udawaj że tego nie ma  w biblotece
     @staticmethod
-    def return_conf_matrix_related_metrics(y_test, y_predict):
-        tn, fp, fn, tp = confusion_matrix(y_true=y_test, y_pred=y_predict).ravel()
-
+    def return_conf_matrix_related_metrics(tn, fp, fn, tp):
         # sensitivity as well
         metrics = {'recall': tp / (tp + fn),
                    'precision': tp / (tp + fp),
