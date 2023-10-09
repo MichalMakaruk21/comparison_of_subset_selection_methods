@@ -29,9 +29,10 @@ class StepwiseSelection(object):
                                      "Model_criterion_value": [],
                                      "Selected_features": []})
 
-    def get_best_feature_criterion_for_init_model(self,
-                                                  X_train: list,
-                                                  y_train: list):
+    def get_feature_criterion_for_init_model(self,
+                                             X_train: list,
+                                             y_train: list,
+                                             subset_selection: str):
 
         scores_dict = pd.DataFrame({"columns": [], "scores": []})
 
@@ -49,7 +50,9 @@ class StepwiseSelection(object):
 
             scores_dict = pd.concat([scores_dict, new_row_df], ignore_index=True)
 
-        return scores_dict['columns'][scores_dict['scores'].idxmin(axis=0)]
+        # add statement for backward
+        return scores_dict['columns'][scores_dict['scores'].idxmin(axis=0)] if \
+            subset_selection == "forward" else scores_dict['columns'][scores_dict['scores'].idxmin(axis=0)]
 
     def count_model_criterion(self,
                               X_train: list,
@@ -128,9 +131,9 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                                   pre_split=pre_split,
                                                                   dict_columns=True)
 
-        init_best_feature_index = super().get_best_feature_criterion_for_init_model(X_train,
-                                                                                    y_train)
-
+        init_best_feature_index = super().get_feature_criterion_for_init_model(X_train,
+                                                                               y_train,
+                                                                               subset_selection="forward")
         # print(f"init variable: {init_best_feature_index}")
 
         columns_idx = list(range(len(ds.return_columns(data_set=df))))
@@ -314,215 +317,215 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                                   tp=tp)
 
 
-class BackwardStepwiseSelection:
+class BackwardStepwiseSelection(StepwiseSelection):
     """
-        model criteria: AIC or BIC
-        feature criteria: p-value or pseudo-R-square
-        """
+    model criteria: AIC, BIC, pseudo_R_square
+    feature criteria: p-value
+    """
 
-    def __init__(self, model_criterion: str, feature_criterion=str()):
+    def __init__(self, model_criterion: str, feature_criterion: str = 'p_value'):
+        super().__init__(model_criterion, feature_criterion)
         self.model = None
         self.model_criterion = model_criterion
         self.feature_criterion = feature_criterion
-        self.logs_df = pd.DataFrame({"Model_criterion": [],
-                                     "Feature_criterion": [],
-                                     "Model_criterion_value": [],
-                                     "Selected_features": []})
 
-    def append_log(self,
-                   model_criterion: str,
-                   feature_criterion: str,
-                   model_criterion_value: float,
-                   selected_features: list) -> pd.DataFrame():
+    def select_subset(self,
+                      df: pd.DataFrame(),
+                      df_pre_split: pd.DataFrame() = None,
+                      pre_split: bool = None):
 
-        new_row = {"Model_criterion": model_criterion,
-                   "Feature_criterion": feature_criterion,
-                   "Model_criterion_value": model_criterion_value,
-                   "Selected_features": selected_features}
+        # print(f'columns len: {len(ds.return_columns(data_set=df))}')
 
-        # self.logs_df = self.logs_df.append(new_row, ignore_index=True)
-        self.logs_df = pd.concat([self.logs_df, pd.DataFrame([new_row])], ignore_index=True)
-        self.logs_df = self.logs_df.sort_values(by=['Model_criterion_value'], ascending=False)
-        return self.logs_df
+        X_train, X_test, y_train, y_test, columns = ds.split_data(data_set=df,
+                                                                  data_set_if_pre=df_pre_split,
+                                                                  pre_split=pre_split,
+                                                                  dict_columns=True)
 
-    def select_subset(self, data_set: pd.DataFrame()):
+        init_best_feature_index = super().get_feature_criterion_for_init_model(X_train,
+                                                                               y_train,
+                                                                               subset_selection="backward")
 
-        X = data_set.drop(['y'], axis=1)
-        y = data_set['y']
+        # print(f"init variable: {init_best_feature_index}")
 
-        selected_features = []
-        remaining_features = list(X.columns)
+        columns_idx = list(range(len(ds.return_columns(data_set=df))))
+        selected_features = [columns_idx[int(init_best_feature_index)]]
+        remaining_features = list(filter(lambda idx: idx != init_best_feature_index, columns_idx))
 
-        # train initial model with all features
-        try:
-            init_model = sm.Logit(y, X)
-            init_result = init_model.fit(disp=False)
+        # print(f"columns indexes: {columns_idx}")
 
-            init_log_likelihood = init_model.loglike(init_result.params)
+        best_model_score = super().count_model_criterion(X_train,
+                                                         y_train,
+                                                         selected_features)
+        # print(f"init best model score: {best_model_score}")
 
-            initial_model_score = (-2 * init_log_likelihood) + (
-                    2 * len(X.columns)) if self.model_criterion == 'AIC' else (-2 * init_log_likelihood) + (
-                    len(X.columns) * math.log(len(X.columns), math.e))
+        while remaining_features:
+            # print(f"selected features: {selected_features}")
+            # print(f"remaining features: {remaining_features}")
 
-            self.append_log(self.model_criterion,
-                            self.feature_criterion,
-                            initial_model_score,
-                            X.columns)
+            feature, score = self.feature_criterion_eval(X_train,
+                                                         y_train,
+                                                         selected_features,
+                                                         remaining_features)
 
-            best_model_score = initial_model_score
+            #  X_subset_with_best_feature_added = X_train[selected_features + [int(feature)]]
 
-        except Exception as e:
-            print(f"Error occurred while training initial model: {e}")
-            return None
+            best_model_score, selected_features, remaining_features = self.model_criterion_eval(y=y_train,
+                                                                                                X_train=X_train,
+                                                                                                best_model_score=best_model_score,
+                                                                                                selected_features=selected_features,
+                                                                                                remaining_features=remaining_features,
+                                                                                                feature=feature)
 
-        else:
+            # print(selected_features)
+            # print(best_model_score)
 
-            while remaining_features:
+            # print(f"selected_features: {selected_features}")
+        return X_train, X_test, y_train, y_test
 
-                worst_feature_score = None
+    def feature_criterion_eval(self,
+                               X_train: pd.DataFrame(),
+                               y_train: pd.DataFrame(),
+                               selected_features: list,
+                               remaining_features: list):
 
-                X_subset_with_worst_feature_dropped = []
+        scores_dict = pd.DataFrame({"columns": [], "scores": []})
 
-                for feature in remaining_features:
-                    # remove returns null list
-                    # ll = [x for x in selected_features if x != feature]
-                    X_subset = X[[x for x in remaining_features if x != feature]]
-                    display(f"y variable:\n {y}")
-                    display(f"X variables:\n {X_subset}")
+        for feature in remaining_features:
+            # print(f"feature id: {feature}")
+            # print(f"remaining_features: {remaining_features}")
 
-                    try:
-                        model = sm.Logit(y, X_subset)
-                        result = model.fit(disp=False)
-                    except Exception as e:
-                        print(f"Error occurred while training initial model: {e}")
-                        selected_features.remove(feature)
-                        remaining_features.remove(feature)
-                        continue
-                    else:
+            X_subset = super().select_based_on_idx(x_set=X_train, feature_list=list(filter(lambda idx: idx != feature, remaining_features)))
 
-                        if self.feature_criterion == 'p-value':
-                            score = result.pvalues[feature]
+            # print(f"X_train feature criterion eval: {X_subset}")
+            # print(f"len of x_subset in feature criterion: {len(X_subset[0])}")
+            # print(f"selected features: {selected_features+[feature]}")
 
-                            if worst_feature_score is None:
-                                worst_feature_score = score
-                                X_subset_with_worst_feature_dropped = X_subset
+            try:
+                model = sm.Logit(y_train, X_subset)
+                result = model.fit(disp=False)
+            except Exception:
+                temp_df = pd.DataFrame(data=X_subset, columns=selected_features + [int(feature)])
+                print(temp_df.describe())
+                print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
 
-                                X_subset_with_worst_feature_dropped, best_model_score, selected_features, \
-                                    remaining_features = self.model_criterion_eval(y=y,
-                                                                                   X_subset_with_worst_feature_dropped=X_subset_with_worst_feature_dropped,
-                                                                                   best_model_score=best_model_score,
-                                                                                   selected_features=selected_features,
-                                                                                   remaining_features=remaining_features,
-                                                                                   feature=feature)
+            else:
 
-                            elif score < worst_feature_score:
-                                worst_feature_score = score
-                                X_subset_with_worst_feature_dropped = X_subset
+                new_row = {"columns": feature, "scores": result.pvalues[-1]}
 
-                                X_subset_with_worst_feature_dropped, best_model_score, selected_features, \
-                                    remaining_features = self.model_criterion_eval(y=y,
-                                                                                   X_subset_with_worst_feature_dropped=X_subset_with_worst_feature_dropped,
-                                                                                   best_model_score=best_model_score,
-                                                                                   selected_features=selected_features,
-                                                                                   remaining_features=remaining_features,
-                                                                                   feature=feature)
-                            else:
-                                X_subset = X[selected_features + [feature]]
-                        elif self.feature_criterion == 'pseudo-R-square':
-                            score = 1 - (result.llnull / result.llf)
+                # print(f"feature p_val:  {result.pvalues[-1]}")
 
-                            if worst_feature_score is None:
-                                worst_feature_score = score
-                                X_subset_with_worst_feature_dropped = X_subset
+                new_row_df = pd.DataFrame([new_row])
 
-                                X_subset_with_worst_feature_dropped, best_model_score, selected_features, \
-                                    remaining_features = self.model_criterion_eval(y=y,
-                                                                                   X_subset_with_worst_feature_dropped=X_subset_with_worst_feature_dropped,
-                                                                                   best_model_score=best_model_score,
-                                                                                   selected_features=selected_features,
-                                                                                   remaining_features=remaining_features,
-                                                                                   feature=feature)
+                scores_dict = pd.concat([scores_dict, new_row_df], ignore_index=True)
 
-                            elif score > worst_feature_score:
-                                worst_feature_score = score
-                                X_subset_with_worst_feature_dropped = X_subset
+        # pd.set_option('display.float_format', '{:.2f}'.format)
 
-                                X_subset_with_worst_feature_dropped, best_model_score, selected_features, \
-                                    remaining_features = self.model_criterion_eval(y=y,
-                                                                                   X_subset_with_worst_feature_dropped=X_subset_with_worst_feature_dropped,
-                                                                                   best_model_score=best_model_score,
-                                                                                   selected_features=selected_features,
-                                                                                   remaining_features=remaining_features,
-                                                                                   feature=feature)
-                            else:
-                                X_subset = X[selected_features + [feature]]
-                        else:
-                            print('Set correct feature criterion parameter')
-                        # -----------loop exit-----------------------------------------
-
-            print('working')
-
-        return self.logs_df
+        id_min = scores_dict['scores'].idxmin(axis=0)
+        # print(scores_dict)
+        # print(id_min)
+        return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
 
     def model_criterion_eval(self,
                              y,
-                             X_subset_with_worst_feature_dropped,
+                             X_train,
                              best_model_score,
                              selected_features,
                              remaining_features,
                              feature,
                              ):
 
-        model_with_dropped_feature = sm.Logit(y, X_subset_with_worst_feature_dropped)
-        result_with_dropped_feature = model_with_dropped_feature.fit(disp=False)
-        # ________________________________
+        test_feature_set = selected_features + [int(feature)]
 
-        log_likelihood = model_with_dropped_feature.loglike(result_with_dropped_feature.params)
+        # (f"mc features set: {test_feature_set}")
+
+        model_criterion_val = super().count_model_criterion(X_train,
+                                                            y,
+                                                            test_feature_set)
+        # (f"model criterion: {model_criterion_val}")
 
         if self.model_criterion == "AIC":
-            AIC = (-2 * log_likelihood) + (2 * len(X_subset_with_worst_feature_dropped))
 
-            if AIC < best_model_score:
-                best_model_score = AIC
+            if model_criterion_val > best_model_score:
+                best_model_score = model_criterion_val
 
-                selected_features.append(feature)
+                selected_features = test_feature_set
                 remaining_features.remove(feature)
 
-                self.append_log(self.model_criterion,
-                                self.feature_criterion,
-                                AIC,
-                                selected_features)
+                super().append_log(self.model_criterion,
+                                   model_criterion_val,
+                                   selected_features)
             else:
-                print('Cannot select better subset AIC')
+                print('Cannot select better subset using AIC')
                 remaining_features.remove(feature)
 
         elif self.model_criterion == "BIC":
-            BIC = (-2 * log_likelihood) + (
-                    len(X_subset_with_worst_feature_dropped) * math.log(len(X_subset_with_worst_feature_dropped),
-                                                                        math.e))
-            if BIC > best_model_score:
-                best_model_score = BIC
 
-                selected_features.append(feature)
+            if model_criterion_val < best_model_score:
+                best_model_score = model_criterion_val
+
+                selected_features = test_feature_set
                 remaining_features.remove(feature)
 
-                self.append_log(self.model_criterion,
-                                self.feature_criterion,
-                                BIC,
-                                selected_features)
+                super().append_log(self.model_criterion,
+                                   model_criterion_val,
+                                   selected_features)
 
             else:
-                print('Cannot select better subset BIC')
+                print('Cannot select better subset using BIC')
                 remaining_features.remove(feature)
                 # __________________________
+
+        elif self.model_criterion == "pseudo_R_square":
+
+            if model_criterion_val > best_model_score:
+                best_model_score = model_criterion_val
+
+                selected_features = test_feature_set
+                remaining_features.remove(feature)
+
+                super().append_log(self.model_criterion,
+                                   model_criterion_val,
+                                   selected_features)
+            else:
+                print('Cannot select better subset using pseudo R-square')
+                remaining_features.remove(feature)
+
         else:
-            raise ValueError("Invalid stopping criterion. Correct values: 'AIC' or 'BIC'.")
+            raise ValueError("Invalid stopping criterion. Correct values: 'AIC', 'BIC' or pseudo_R_square.")
 
-        return X_subset_with_worst_feature_dropped, best_model_score, selected_features, remaining_features
+        return best_model_score, selected_features, remaining_features
 
-    def evaluate_model(self, pre_splitted=False):
+    def evaluate_model(self,
+                       df: pd.DataFrame(),
+                       df_pre_split: pd.DataFrame() = None,
+                       pre_split: bool = None):
 
-        return 0
+        X_train, X_test, y_train, y_test = self.select_subset(df=df,
+                                                              df_pre_split=df_pre_split,
+                                                              pre_split=pre_split)
+
+        best_subset = self.logs_df["Selected_features"].loc[
+            self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
+                                                                  0] == "pseudo_R_square"
+            else self.logs_df["Model_criterion_value"].idxmin()
+        ]
+
+        print(f"best_subset: {best_subset}")
+
+        X_train = super().select_based_on_idx(X_train, best_subset)
+        X_test = super().select_based_on_idx(X_test, best_subset)
+
+        model = LogisticRegression(solver='liblinear')
+        model.fit(X_train, y_train)
+
+        y_predict = model.predict(X_test)
+
+        tn, fp, fn, tp = confusion_matrix(y_true=y_test, y_pred=y_predict).ravel()
+
+        return SelectedMetrics.return_conf_matrix_related_metrics(tn=tn,
+                                                                  fp=fp,
+                                                                  fn=fn,
+                                                                  tp=tp)
 
 
 # class HybridStepwiseSelection:

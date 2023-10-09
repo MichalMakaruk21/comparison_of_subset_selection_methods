@@ -58,12 +58,13 @@ if __name__ == '__main__':
     #  bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
     # ll = bf.select_subset(df=sd_A, df_pre_split=sd_B, pre_split=True)
 
-    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
-    # log_df = fss.select_subset(sample_dataset)
+    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    # forward_subset_selection_ds1 = fss.evaluate_model(sample_dataset)
 
-    forward_subset_selection_ds1 = fss.evaluate_model(sample_dataset)
+    bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    xd = bss.select_subset(sample_dataset)
 
-    print(forward_subset_selection_ds1)
+    print(xd)
     # log_df.to_csv("log_df.csv", decimal=".", sep="|")
 
     # bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
