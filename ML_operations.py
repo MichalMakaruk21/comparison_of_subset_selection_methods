@@ -309,12 +309,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         y_predict = model.predict(X_test)
 
-        tn, fp, fn, tp = confusion_matrix(y_true=y_test, y_pred=y_predict).ravel()
-
-        return SelectedMetrics.return_conf_matrix_related_metrics(tn=tn,
-                                                                  fp=fp,
-                                                                  fn=fn,
-                                                                  tp=tp)
+        return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 class BackwardStepwiseSelection(StepwiseSelection):
@@ -429,7 +424,6 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         id_min = scores_dict['scores'].idxmin(axis=0)
 
-        print(scores_dict)
         # print(id_min)
         return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
 
@@ -445,12 +439,12 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         test_feature_set = list(filter(lambda idx: idx != feature, selected_features))
 
-        print(f"mc features set: {test_feature_set}")
+        # print(f"mc features set: {test_feature_set}")
 
         model_criterion_val = super().count_model_criterion(X_train,
                                                             y,
                                                             test_feature_set)
-        print(f"model criterion: {model_criterion_val}")
+        # print(f"model criterion: {model_criterion_val}")
 
         if self.model_criterion == "AIC":
 
@@ -508,7 +502,7 @@ class BackwardStepwiseSelection(StepwiseSelection):
         else:
             raise ValueError("Invalid stopping criterion. Correct values: 'AIC', 'BIC' or pseudo_R_square.")
 
-        self.logs_df.to_csv("log_df.csv", decimal=".", sep="|", mode='a', index=False, header=False)
+        # self.logs_df.to_csv("log_df.csv", decimal=".", sep="|", mode='a', index=False, header=False)
 
         return best_model_score, selected_features, remaining_features, not_dropped_features
 
@@ -537,12 +531,7 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         y_predict = model.predict(X_test)
 
-        tn, fp, fn, tp = confusion_matrix(y_true=y_test, y_pred=y_predict).ravel()
-
-        return SelectedMetrics.return_conf_matrix_related_metrics(tn=tn,
-                                                                  fp=fp,
-                                                                  fn=fn,
-                                                                  tp=tp)
+        return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 # class HybridStepwiseSelection:
@@ -560,7 +549,7 @@ class Lasso:
             train = model.fit(X_train, y_train)
 
             y_predict = train.predict(X_test)
-            return SelectedMetrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
+            return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
         if not pre_split:
             X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
@@ -570,7 +559,7 @@ class Lasso:
 
             y_predict = train.predict(X_test)
 
-            return SelectedMetrics.return_conf_matrix_related_metrics(y_test=y_test, y_predict=y_predict)
+            return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 class CrossValidation:
@@ -713,7 +702,10 @@ class SelectedMetrics:
 
     # nie udawaj że tego nie ma  w biblotece
     @staticmethod
-    def return_conf_matrix_related_metrics(tn, fp, fn, tp):
+    def return_conf_matrix_related_metrics(y_true: list,
+                                           y_predict: list):
+        tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_predict).ravel()
+
         # recall known as sensitivity as well
         metrics = {'recall': tp / (tp + fn),
                    'precision': tp / (tp + fp),

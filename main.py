@@ -60,12 +60,10 @@ if __name__ == '__main__':
 
     # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
     # forward_subset_selection_ds1 = fss.evaluate_model(sample_dataset)
-
-    bss = ml.BackwardStepwiseSelection(model_criterion='pseudo_R_square', feature_criterion='p_value')
-    xd = bss.select_subset(sample_dataset)
-
-    log_df = bss.logs_df
-    print(log_df)
+    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    xd = fss.evaluate_model(sample_dataset)
+    # bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    # xd = bss.evaluate_model(sample_dataset)
 
     # log_df.to_csv("log_df.csv", decimal=".", sep="|", mode='a')
 
