@@ -18,7 +18,7 @@ d4 = d.DataSet4()
 comb_generator = d.SubDataFrameGenerator()
 
 lasso = ml.Lasso()
-kross_val = ml.KrossValidation()
+kross_val = ml.CrossValidation()
 
 feature_importance = ml.FeaturePermutation()
 bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
 
     start = time.time()
-    print("forward selection start")
+    print("Pipeline start")
     # df_logs = fss.select_subset(data_set=sample_dataset)
     # log = fss.logs_df
 
@@ -58,8 +58,22 @@ if __name__ == '__main__':
     #  bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
     # ll = bf.select_subset(df=sd_A, df_pre_split=sd_B, pre_split=True)
 
-    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
-    fss.select_subset(sample_dataset)
+    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    # forward_subset_selection_ds1 = fss.evaluate_model(sample_dataset)
+    fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    xd = fss.evaluate_model(sample_dataset)
+    # bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    # xd = bss.evaluate_model(sample_dataset)
+
+    # log_df.to_csv("log_df.csv", decimal=".", sep="|", mode='a')
+
+    print(xd)
+    # log_df.to_csv("log_df.csv", decimal=".", sep="|")
+
+    # bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
+    # bf = ml.BruteForce(feature_criterion='pseudo_R_square', criterion_val='0.2')
+    # bf.select_subset(df=sample_dataset)
+
     """
     for ds in ["d1", "d2", "d3"]:
         x = eval(f"{ds}.preprocess_data(scaler_type='StandardScaler')")
@@ -67,7 +81,7 @@ if __name__ == '__main__':
         print(len(ll))
 """
     end = time.time()
-    print(f"Forward selection exec time: {end - start}")
+    print(f"Pipeline exec time: {end - start}")
     # print(ll)
     # df_logs.to_csv("fss_log.csv", sep="|")
 

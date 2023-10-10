@@ -258,8 +258,11 @@ class DataSplitter:
             y = np.array((data_set['y']))
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-            return X_train, X_test, y_train, y_test, list(data_set.columns) if dict_columns is True\
-                else X_train, X_test, y_train, y_test
+
+            if dict_columns is True:
+                return X_train, X_test, y_train, y_test, list(data_set.columns)
+            else:
+                return X_train, X_test, y_train, y_test
 
         elif pre_split:
             X_train = np.array(data_set.drop(['y'], axis=1))
@@ -267,8 +270,10 @@ class DataSplitter:
             y_train = np.array(data_set['y'])
             y_test = np.array(data_set_if_pre['y'])
 
-            return X_train, X_test, y_train, y_test, list(data_set.columns) if dict_columns is True\
-                else X_train, X_test, y_train, y_test
+            if dict_columns is True:
+                return X_train, X_test, y_train, y_test, list(data_set.columns)
+            else:
+                return X_train, X_test, y_train, y_test
         else:
             raise ValueError(f'Incorrect parameters')
 
