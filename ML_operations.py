@@ -1,11 +1,7 @@
 import data_operations as do
-import itertools
 import pandas as pd
 import numpy as np
 import sklearn
-from IPython.display import display
-from sklearn.model_selection import train_test_split
-from sklearn.feature_selection import SelectFromModel, RFE
 from sklearn.linear_model import LogisticRegression, LassoCV
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import KFold, cross_validate, cross_val_score
@@ -310,7 +306,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         y_predict = model.predict(X_test)
 
-        return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
+        metrics_calculator = SelectedMetrics()
+        return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 class BackwardStepwiseSelection(StepwiseSelection):
@@ -532,7 +529,8 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         y_predict = model.predict(X_test)
 
-        return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
+        metrics_calculator = SelectedMetrics()
+        return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 # class HybridStepwiseSelection:
@@ -542,6 +540,9 @@ class Lasso:
     def perform_lasso_logistic_regression(df: pd.DataFrame(),
                                           df_pre_split: pd.DataFrame() = None,
                                           pre_split=False):
+
+        metrics_calculator = SelectedMetrics()
+
         if pre_split:
             X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
                                                              data_set_if_pre=df_pre_split,
@@ -550,7 +551,7 @@ class Lasso:
             train = model.fit(X_train, y_train)
 
             y_predict = train.predict(X_test)
-            return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
+            return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
         if not pre_split:
             X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
@@ -560,7 +561,7 @@ class Lasso:
 
             y_predict = train.predict(X_test)
 
-            return SelectedMetrics.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
+            return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 class CrossValidation:
@@ -569,23 +570,39 @@ class CrossValidation:
     """
 
     @staticmethod
-    def perform_kross_validation_train(df: pd.DataFrame()):
-        scoring = ['accuracy', 'precision', 'recall', 'f1']
+    def eval_cross_validation_train(df: pd.DataFrame()):
+
+        metrics_calculator = SelectedMetrics()
+        split_count = 10
 
         X = df.drop(['y'], axis=1)
         y = df['y']
 
         model = LogisticRegression()
 
-        k_folds = KFold(n_splits=10)
-        # coud not find additonal liblaries
-        print(sklearn.metrics.get_scorer_names())
-        scores = cross_validate(model, X, y, cv=k_folds, scoring=scoring, return_train_score=True)
-        return {'accuracy': scores['test_accuracy'].mean(),
-                'precision': scores['test_precision'].mean(),
-                'recall': scores['test_recall'].mean(),
-                'f1': scores['test_f1'].mean()}
+        k_folds = KFold(n_splits=split_count)
 
+        tp = tn = fp = fn = []
+
+        print(k_folds.split(X))
+
+        for train_index, test_index in k_folds.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+
+            # Calculate confusion matrix for the current fold
+            cm = confusion_matrix(y_test, y_pred)
+
+            # Update true positives, true negatives, false positives, and false negatives
+            tp.append(cm[1, 1])
+            tn.append(cm[0, 0])
+            fp.append(cm[0, 1])
+            fn.append(cm[1, 0])
+
+        return metrics_calculator.return_conf_matrix_related_metrics_for_cross(_tp=tp, _tn=tn, _fp=fp, _fn=fn)
 
 class FeaturePermutation:
     @staticmethod
@@ -636,12 +653,14 @@ class FeaturePermutation:
 
 class BruteForce:
     """
-    feature criterion should be "pseudo_R_square" or "p_vlaue"
+    feature criterion should be "p_value"
     feed model only with variables which match feature criterion
-    Data set 4 cannot run due to lack of memeory
+    Data set 4 cannot run due to lack of memory
     """
 
-    def __init__(self, feature_criterion: str, criterion_val=float):
+    def __init__(self,
+                 feature_criterion: str = "p_value",
+                 criterion_val=float):
         self.feature_criterion = feature_criterion
         self.criterion_val = criterion_val
 
@@ -650,7 +669,6 @@ class BruteForce:
                       df_pre_split: pd.DataFrame() = None,
                       pre_split=False
                       ):
-
         X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
                                                          data_set_if_pre=df_pre_split,
                                                          pre_split=pre_split)
@@ -658,61 +676,98 @@ class BruteForce:
         model = sm.Logit(y_train, X_train)
         result = model.fit(disp=False)
 
-        if self.feature_criterion == "p_value":
-            selected_features_idx = [idx for idx, feature in enumerate(result.pvalues) if
-                                     feature <= float(self.criterion_val)]
+        selected_features_idx = [idx for idx, feature in enumerate(result.pvalues) if
+                                 feature <= float(self.criterion_val)]
 
-            X_train = X_train[:, selected_features_idx]
-            X_test = X_test[:, selected_features_idx]
-            return X_train, X_test, y_train, y_test
+        print(selected_features_idx)
 
-        if self.feature_criterion == "pseudo_R_square":
-            print(f"p_val: {result.pvalues}")
-            print(f"params: {result.params}")
+        X_train = X_train[:, selected_features_idx]
+        X_test = X_test[:, selected_features_idx]
 
-            params = result.params
+        return X_train, X_test, y_train, y_test
 
-            log_like = model.loglikeobs(params=params)
-            log_like_fit = result.llnull
+    def evaluate_model(self,
+                       df: pd.DataFrame(),
+                       df_pre_split: pd.DataFrame() = None,
+                       pre_split: bool = None):
+        X_train, X_test, y_train, y_test = self.select_subset(df=df,
+                                                              df_pre_split=df_pre_split,
+                                                              pre_split=pre_split)
 
-            print("______________________")
+        model = LogisticRegression(solver='liblinear')
+        model.fit(X_train, y_train)
 
-            print(len(log_like))
-            print(log_like_fit)
+        y_predict = model.predict(X_test)
 
-            # xd = (log_like - log_like_fit) / log_like
-
-            xd = [(x - log_like_fit) for x in log_like]
-
-            print(f"idk R_square_list: {xd}")
-            # for x in xd:
-            # print(x)
-
-            score = 1 - (result.llnull / result.llf)
-            print(score)
-            # xd = model.pseudo_rsquared(kind=' “mcf”')
-
-            return 0
-
-    def eval_model(self):
-
-        return 0
+        metrics_calculator = SelectedMetrics()
+        return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 class SelectedMetrics:
 
-    # nie udawaj że tego nie ma  w biblotece
-    @staticmethod
-    def return_conf_matrix_related_metrics(y_true: list,
+    def __init__(self):
+        self.metrics = pd.DataFrame({'recall': [float()],
+                                     'precision': [float()],
+                                     'specificity': [float()],
+                                     'negative_predictive_value': [float()],
+                                     'accuracy': [float()],
+                                     'balanced_accuracy': [float()],
+                                     'f1_score': [float()]})
+
+    def return_conf_matrix_related_metrics(self,
+                                           y_true: list,
                                            y_predict: list):
         tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_predict).ravel()
 
+        self.calculate_metrics(tn=tn,
+                               fp=fp,
+                               fn=fn,
+                               tp=tp)
+        # print(f"cm: {confusion_matrix(y_true=y_true, y_pred=y_predict)}")
+
+        return self.metrics
+
+    def return_conf_matrix_related_metrics_for_cross(self,
+                                                     _tn: list,
+                                                     _fp: list,
+                                                     _fn: list,
+                                                     _tp: list):
+
+        for tn, fp, fn, tp in zip(_tn, _fp, _fn, _tp):
+
+            self.calculate_metrics(tn=tn,
+                                   fp=fp,
+                                   fn=fn,
+                                   tp=tp)
+
+        mean_values = self.metrics.iloc[:-1].mean()
+        self.metrics = pd.DataFrame(mean_values).T
+
+        return self.metrics
+
+    def calculate_metrics(self,
+                          tn: int,
+                          fp: int,
+                          fn: int,
+                          tp: int):
         # recall known as sensitivity as well
-        metrics = {'recall': tp / (tp + fn),
-                   'precision': tp / (tp + fp),
-                   'specificity': tn / (tn + fp),
-                   'negative_predictive_value': tn / (tn + fn),
-                   'accuracy': (tp + tn) / (tp + tn + fp + tn),
-                   'balanced_accuracy': ((tp / (tp + fn)) + (tn / (tn + fp))) / 2,
-                   'f1_score': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
-        return metrics
+        metrics_formula = {'recall': tp / (tp + fn),
+                           'precision': tp / (tp + fp),
+                           'specificity': tn / (tn + fp),
+                           'negative_predictive_value': tn / (tn + fn),
+                           'accuracy': (tp + tn) / (tp + tn + fp + tn),
+                           'balanced_accuracy': ((tp / (tp + fn)) + (tn / (tn + fp))) / 2,
+                           'f1_score': 2 * (
+                                   ((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))
+                           }
+
+        new_row_df = pd.DataFrame([metrics_formula])
+
+        self.metrics = pd.concat([self.metrics, new_row_df], ignore_index=True)
+
+        if (self.metrics.loc[0] == 0).all():
+            self.metrics.drop(index=0, axis=0, inplace=True)
+
+        self.metrics.reset_index(drop=True, inplace=True)
+
+        pass
