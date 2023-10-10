@@ -266,7 +266,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         elif self.model_criterion == "pseudo_R_square":
 
-            if model_criterion_val < best_model_score:
+            if model_criterion_val > best_model_score:
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
@@ -341,21 +341,21 @@ class BackwardStepwiseSelection(StepwiseSelection):
                                                                   pre_split=pre_split,
                                                                   dict_columns=True)
 
-        init_best_feature_index = super().get_feature_criterion_for_init_model(X_train,
-                                                                               y_train,
-                                                                               subset_selection="backward")
+        init_worst_feature_index = super().get_feature_criterion_for_init_model(X_train,
+                                                                                y_train,
+                                                                                subset_selection="backward")
 
         # print(f"init variable: {init_best_feature_index}")
 
         columns_idx = list(range(len(ds.return_columns(data_set=df))))
-        selected_features = [columns_idx[int(init_best_feature_index)]]
-        remaining_features = list(filter(lambda idx: idx != init_best_feature_index, columns_idx))
-
+        selected_features = list(filter(lambda idx: idx != init_worst_feature_index, columns_idx))
+        remaining_features = selected_features
+        not_dropped_features = []
         # print(f"columns indexes: {columns_idx}")
 
         best_model_score = super().count_model_criterion(X_train,
                                                          y_train,
-                                                         selected_features)
+                                                         remaining_features)
         # print(f"init best model score: {best_model_score}")
 
         while remaining_features:
@@ -365,16 +365,18 @@ class BackwardStepwiseSelection(StepwiseSelection):
             feature, score = self.feature_criterion_eval(X_train,
                                                          y_train,
                                                          selected_features,
-                                                         remaining_features)
+                                                         not_dropped_features)
 
             #  X_subset_with_best_feature_added = X_train[selected_features + [int(feature)]]
 
-            best_model_score, selected_features, remaining_features = self.model_criterion_eval(y=y_train,
-                                                                                                X_train=X_train,
-                                                                                                best_model_score=best_model_score,
-                                                                                                selected_features=selected_features,
-                                                                                                remaining_features=remaining_features,
-                                                                                                feature=feature)
+            best_model_score, selected_features, remaining_features, \
+                not_dropped_features = self.model_criterion_eval(y=y_train,
+                                                                 X_train=X_train,
+                                                                 best_model_score=best_model_score,
+                                                                 selected_features=selected_features,
+                                                                 remaining_features=remaining_features,
+                                                                 not_dropped_features=not_dropped_features,
+                                                                 feature=feature)
 
             # print(selected_features)
             # print(best_model_score)
@@ -386,25 +388,30 @@ class BackwardStepwiseSelection(StepwiseSelection):
                                X_train: pd.DataFrame(),
                                y_train: pd.DataFrame(),
                                selected_features: list,
-                               remaining_features: list):
+                               not_dropped_features: list):
 
         scores_dict = pd.DataFrame({"columns": [], "scores": []})
 
-        for feature in remaining_features:
+        # some features are selected because of low p_val, but model criterion already checked that dropping
+        # these features have no or negative effects on model
+        filtered_features = list(filter(lambda idx: idx not in not_dropped_features, selected_features))
+
+        for feature in filtered_features:
             # print(f"feature id: {feature}")
             # print(f"remaining_features: {remaining_features}")
 
-            X_subset = super().select_based_on_idx(x_set=X_train, feature_list=list(filter(lambda idx: idx != feature, remaining_features)))
+            feature_list = list(filter(lambda idx: idx != feature, selected_features))
+            X_subset = super().select_based_on_idx(x_set=X_train, feature_list=feature_list)
 
             # print(f"X_train feature criterion eval: {X_subset}")
             # print(f"len of x_subset in feature criterion: {len(X_subset[0])}")
-            # print(f"selected features: {selected_features+[feature]}")
-
+            # print(f"feature list: {feature_list}")
             try:
                 model = sm.Logit(y_train, X_subset)
                 result = model.fit(disp=False)
             except Exception:
-                temp_df = pd.DataFrame(data=X_subset, columns=selected_features + [int(feature)])
+
+                temp_df = pd.DataFrame(data=X_subset, columns=feature_list)
                 print(temp_df.describe())
                 print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
 
@@ -421,7 +428,8 @@ class BackwardStepwiseSelection(StepwiseSelection):
         # pd.set_option('display.float_format', '{:.2f}'.format)
 
         id_min = scores_dict['scores'].idxmin(axis=0)
-        # print(scores_dict)
+
+        print(scores_dict)
         # print(id_min)
         return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
 
@@ -431,17 +439,18 @@ class BackwardStepwiseSelection(StepwiseSelection):
                              best_model_score,
                              selected_features,
                              remaining_features,
+                             not_dropped_features,
                              feature,
                              ):
 
-        test_feature_set = selected_features + [int(feature)]
+        test_feature_set = list(filter(lambda idx: idx != feature, selected_features))
 
-        # (f"mc features set: {test_feature_set}")
+        print(f"mc features set: {test_feature_set}")
 
         model_criterion_val = super().count_model_criterion(X_train,
                                                             y,
                                                             test_feature_set)
-        # (f"model criterion: {model_criterion_val}")
+        print(f"model criterion: {model_criterion_val}")
 
         if self.model_criterion == "AIC":
 
@@ -449,22 +458,23 @@ class BackwardStepwiseSelection(StepwiseSelection):
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
-                remaining_features.remove(feature)
+                remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
 
                 super().append_log(self.model_criterion,
                                    model_criterion_val,
                                    selected_features)
             else:
                 print('Cannot select better subset using AIC')
-                remaining_features.remove(feature)
+                remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
+                not_dropped_features.append(feature)
 
         elif self.model_criterion == "BIC":
 
-            if model_criterion_val < best_model_score:
+            if model_criterion_val > best_model_score:
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
-                remaining_features.remove(feature)
+                remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
 
                 super().append_log(self.model_criterion,
                                    model_criterion_val,
@@ -472,28 +482,35 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
             else:
                 print('Cannot select better subset using BIC')
-                remaining_features.remove(feature)
-                # __________________________
+                remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
+                not_dropped_features.append(feature)
 
         elif self.model_criterion == "pseudo_R_square":
 
-            if model_criterion_val > best_model_score:
+            print(f"test_feature_set: {test_feature_set}")
+            print(f"remaining_features: {remaining_features}")
+            print(f"not_dropped_features: {not_dropped_features}")
+
+            if model_criterion_val < best_model_score:
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
-                remaining_features.remove(feature)
+                remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
 
                 super().append_log(self.model_criterion,
                                    model_criterion_val,
                                    selected_features)
             else:
                 print('Cannot select better subset using pseudo R-square')
-                remaining_features.remove(feature)
+                remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
+                not_dropped_features.append(feature)
 
         else:
             raise ValueError("Invalid stopping criterion. Correct values: 'AIC', 'BIC' or pseudo_R_square.")
 
-        return best_model_score, selected_features, remaining_features
+        self.logs_df.to_csv("log_df.csv", decimal=".", sep="|", mode='a', index=False, header=False)
+
+        return best_model_score, selected_features, remaining_features, not_dropped_features
 
     def evaluate_model(self,
                        df: pd.DataFrame(),
@@ -697,11 +714,12 @@ class SelectedMetrics:
     # nie udawaj że tego nie ma  w biblotece
     @staticmethod
     def return_conf_matrix_related_metrics(tn, fp, fn, tp):
-        # sensitivity as well
+        # recall known as sensitivity as well
         metrics = {'recall': tp / (tp + fn),
                    'precision': tp / (tp + fp),
                    'specificity': tn / (tn + fp),
                    'negative_predictive_value': tn / (tn + fn),
                    'accuracy': (tp + tn) / (tp + tn + fp + tn),
+                   'balanced_accuracy': ((tp / (tp + fn)) + (tn / (tn + fp))) / 2,
                    'f1_score': 2 * (((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn))))}
         return metrics
