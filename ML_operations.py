@@ -604,28 +604,34 @@ class CrossValidation:
 
         return metrics_calculator.return_conf_matrix_related_metrics_for_cross(_tp=tp, _tn=tn, _fp=fp, _fn=fn)
 
+
 class FeaturePermutation:
     @staticmethod
     def perform_selection_based_on_permutation(df: pd.DataFrame(),
                                                df_pre_split: pd.DataFrame() = None,
                                                pre_split=False):
 
+        model = LogisticRegression()
+
         if pre_split:
             X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
                                                              data_set_if_pre=df_pre_split,
                                                              pre_split=pre_split)
-            model = LogisticRegression()
-            perm_imp = permutation_importance(model, X_test, y_test, n_repeats=30, random_state=42)
+
+            perm_imp = permutation_importance(model,
+                                              X_test,
+                                              y_test,
+                                              n_repeats=30,
+                                              random_state=42)
             return
 
         if not pre_split:
             X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
             df_columns = ds.return_columns(data_set=df, pre_split=False)
 
-            model = LogisticRegression()
             train = model.fit(X_train, y_train)
-
             y_predict = train.predict(X_test)
+
             conf_matrix_metrics = SelectedMetrics().return_conf_matrix_related_metrics(y_test=y_test,
                                                                                        y_predict=y_predict)
             print(conf_matrix_metrics)

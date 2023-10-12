@@ -21,7 +21,11 @@ lasso = ml.Lasso()
 kross_val = ml.CrossValidation()
 
 feature_importance = ml.FeaturePermutation()
+fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
 bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
+
+
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -43,9 +47,6 @@ if __name__ == '__main__':
         # df_logs = bss.select_subset(data_set=sub_df)
         display(df_logs) 
         """
-
-
-    # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='pseudo-R-square')
 
     start = time.time()
     print("Pipeline start")
