@@ -132,7 +132,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                                                subset_selection="forward")
         # print(f"init variable: {init_best_feature_index}")
 
-        columns_idx = list(range(len(ds.return_columns(data_set=df))))
+        columns_idx = list(range(len(columns)))
         selected_features = [columns_idx[int(init_best_feature_index)]]
         remaining_features = list(filter(lambda idx: idx != init_best_feature_index, columns_idx))
 
@@ -166,7 +166,12 @@ class ForwardStepwiseSelection(StepwiseSelection):
             # print(best_model_score)
 
             # print(f"selected_features: {selected_features}")
-        return X_train, X_test, y_train, y_test
+        # return X_train, X_test, y_train, y_test
+        return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
+            self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
+                                                                  0] == "pseudo_R_square"
+            else self.logs_df["Model_criterion_value"].idxmin()
+        ]
 
     def feature_criterion_eval(self,
                                X_train: pd.DataFrame(),
@@ -286,16 +291,17 @@ class ForwardStepwiseSelection(StepwiseSelection):
                        df_pre_split: pd.DataFrame() = None,
                        pre_split: bool = None):
 
-        X_train, X_test, y_train, y_test = self.select_subset(df=df,
-                                                              df_pre_split=df_pre_split,
-                                                              pre_split=pre_split)
-
+        # added best subset as new value
+        X_train, X_test, y_train, y_test, best_subset = self.select_subset(df=df,
+                                                                           df_pre_split=df_pre_split,
+                                                                           pre_split=pre_split)
+        """
         best_subset = self.logs_df["Selected_features"].loc[
             self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
                                                                   0] == "pseudo_R_square"
             else self.logs_df["Model_criterion_value"].idxmin()
         ]
-
+        """
         print(f"best_subset: {best_subset}")
 
         X_train = super().select_based_on_idx(X_train, best_subset)
@@ -340,7 +346,7 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         # print(f"init variable: {init_best_feature_index}")
 
-        columns_idx = list(range(len(ds.return_columns(data_set=df))))
+        columns_idx = list(range(len(columns)))
         selected_features = list(filter(lambda idx: idx != init_worst_feature_index, columns_idx))
         remaining_features = selected_features
         not_dropped_features = []
@@ -375,13 +381,19 @@ class BackwardStepwiseSelection(StepwiseSelection):
             # print(best_model_score)
 
             # print(f"selected_features: {selected_features}")
-        return X_train, X_test, y_train, y_test
+        # return X_train, X_test, y_train, y_test
+        return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
+            self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
+                                                                  0] == "pseudo_R_square"
+            else self.logs_df["Model_criterion_value"].idxmin()
+        ]
 
     def feature_criterion_eval(self,
                                X_train: pd.DataFrame(),
                                y_train: pd.DataFrame(),
                                selected_features: list,
                                not_dropped_features: list):
+        # Wrong concept somehow
 
         scores_dict = pd.DataFrame({"columns": [], "scores": []})
 
@@ -509,16 +521,16 @@ class BackwardStepwiseSelection(StepwiseSelection):
                        df_pre_split: pd.DataFrame() = None,
                        pre_split: bool = None):
 
-        X_train, X_test, y_train, y_test = self.select_subset(df=df,
-                                                              df_pre_split=df_pre_split,
-                                                              pre_split=pre_split)
-
+        X_train, X_test, y_train, y_test, best_subset = self.select_subset(df=df,
+                                                                           df_pre_split=df_pre_split,
+                                                                           pre_split=pre_split)
+        """
         best_subset = self.logs_df["Selected_features"].loc[
             self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
                                                                   0] == "pseudo_R_square"
             else self.logs_df["Model_criterion_value"].idxmin()
         ]
-
+        """
         print(f"best_subset: {best_subset}")
 
         X_train = super().select_based_on_idx(X_train, best_subset)
@@ -571,7 +583,6 @@ class CrossValidation:
 
     @staticmethod
     def eval_cross_validation_train(df: pd.DataFrame()):
-
         metrics_calculator = SelectedMetrics()
         split_count = 10
 
@@ -626,8 +637,12 @@ class FeaturePermutation:
             return
 
         if not pre_split:
-            X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
-            df_columns = ds.return_columns(data_set=df, pre_split=False)
+            X_train, X_test, y_train, y_test, columns = ds.split_data(data_set=df,
+                                                                      data_set_if_pre=df_pre_split,
+                                                                      pre_split=pre_split,
+                                                                      dict_columns=True)
+
+            # df_columns = ds.return_columns(data_set=df, pre_split=False)
 
             train = model.fit(X_train, y_train)
             y_predict = train.predict(X_test)
@@ -638,7 +653,7 @@ class FeaturePermutation:
             orginal_accuracy = conf_matrix_metrics['accuracy']
             orginal_f1 = conf_matrix_metrics['f1_score']
 
-            X_test_with_columns = pd.DataFrame(data=X_test, columns=df_columns)
+            X_test_with_columns = pd.DataFrame(data=X_test, columns=columns)
 
             result = permutation_importance(model, X_test, y_test, n_repeats=10, random_state=42)
 
@@ -740,7 +755,6 @@ class SelectedMetrics:
                                                      _tp: list):
 
         for tn, fp, fn, tp in zip(_tn, _fp, _fn, _tp):
-
             self.calculate_metrics(tn=tn,
                                    fp=fp,
                                    fn=fn,
