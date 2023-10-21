@@ -5,7 +5,27 @@ from sklearn.model_selection import train_test_split
 import itertools
 
 
-class DataSet1:
+class DataSet(object):
+    def read_data(self) -> pd.DataFrame():
+        pass
+
+    def preprocess_data(self, scaler_type: str) -> pd.DataFrame():
+        pass
+
+    def read_train_data(self) -> pd.DataFrame():
+        pass
+
+    def read_test_data(self) -> pd.DataFrame():
+        pass
+
+    def preprocess_train_data(self, scaler_type: str) -> pd.DataFrame():
+        pass
+
+    def preprocess_test_data(self, scaler_type: str) -> pd.DataFrame():
+        pass
+
+
+class DataSet1(DataSet):
     """
     Implementuje dane z badania:  "Artificial intelligence in breast cancer screening:
                                    Primary care provider preferences" (2020-07-16)
@@ -20,10 +40,10 @@ class DataSet1:
     def __init__(self):
         self.file_path = r'data/Artificial_intelligence_in_breast_cancer_screening_Primary_care_provider_preferences/ai_pcp_processed-1.csv'
 
-    def read_data(self):
+    def read_data(self) -> pd.DataFrame():
         return pd.read_csv(self.file_path, sep=',', header=0)
 
-    def preprocess_data(self, scaler_type: str):
+    def preprocess_data(self, scaler_type: str) -> pd.DataFrame():
         data = self.read_data()
         """
         zmienna niezależna: "tech_negative"
@@ -38,7 +58,7 @@ class DataSet1:
 
         X = X.interpolate(method='linear')
 
-        scaler = ScalerSelector(scaler_type).get_scaler()
+        scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
@@ -46,7 +66,7 @@ class DataSet1:
         return df
 
 
-class DataSet2:
+class DataSet2(DataSet):
     """
     Implementuje dane zbierane przez Sebastiana Tomczaka na przestrzeni 12 lat
     reator: Sebastian Tomczak
@@ -60,10 +80,10 @@ class DataSet2:
     def __init__(self):
         self.file_path = 'data/Polish_companies_bankruptcy/polish_companies_bankruptcy_3.csv'
 
-    def read_data(self):
+    def read_data(self) -> pd.DataFrame():
         return pd.read_csv(self.file_path, sep=',', index_col='id', low_memory=False, encoding='utf-8')
 
-    def preprocess_data(self, scaler_type: str):
+    def preprocess_data(self, scaler_type: str) -> pd.DataFrame():
         data = self.read_data()
         X = data.drop('class', axis=1)
         y = data['class']
@@ -74,7 +94,7 @@ class DataSet2:
         X = X[X.columns.tolist()].astype('float64')
         X = X.interpolate(method='linear', axis=1)
 
-        scaler = ScalerSelector(scaler_type).get_scaler()
+        scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
@@ -82,7 +102,7 @@ class DataSet2:
         return df
 
 
-class DataSet3:
+class DataSet3(DataSet):
     """
     Implementuje dane z badania: Transfer Learning with Partial Observability Applied to Cervical Cancer Screening.'
                                  Iberian Conference on Pattern Recognition and Image Analysis.
@@ -101,10 +121,10 @@ class DataSet3:
     def __init__(self):
         self.file_path = 'data/Cervical_cancer_Risk_Factors/risk_factors_cervical_cancer.csv'
 
-    def read_data(self):
+    def read_data(self) -> pd.DataFrame():
         return pd.read_csv(self.file_path, sep=',')
 
-    def preprocess_data(self, scaler_type: str):
+    def preprocess_data(self, scaler_type: str) -> pd.DataFrame():
         data = self.read_data()
 
         # Usunięcie z powodu braku wartości w ponad 93%
@@ -124,7 +144,7 @@ class DataSet3:
         X = data.drop('Biopsy', axis=1)
         y = data['Biopsy']
 
-        scaler = ScalerSelector(scaler_type).get_scaler()
+        scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
@@ -132,12 +152,13 @@ class DataSet3:
         return df
 
 
-class DataSet4:
+class DataSet4(DataSet):
     """
     Implementuje dane z udostępnione przez U.S. Census Bureau
     Temat: Census-Income (KDD) Data Set
-    link: https://archive.ics.uci.edu/ml/datasets/Census-Income+(KDD)
-    Dane zostały zebrane poprzez badanie ankietowe i dają szerokie spojrzenie na zależność czynników
+    link:
+    Dane zostały zebrane https://archive.ics.uci.edu/dataset/117/census+income+kdd
+    poprzez badanie ankietowe i dają szerokie spojrzenie na zależność czynników
     społeczno-ekonomicznych na zarobki ankietowanych. Zagregowane przez dostawcę dane mają odpowiadać na pytanie
     "Czy dana osoba będzie zarabiać powyżej, czy poniżej 50 000 tys dolarów rocznie?".
 
@@ -165,17 +186,17 @@ class DataSet4:
                              'fill_inc_questionnaire_for_veterans_admin', 'veterans_benefits', 'weeks_worked_in_year',
                              'year', 'income']
 
-    def read_train_data(self):
+    def read_train_data(self) -> pd.DataFrame():
         df = pd.read_csv(self.file_path_train_data, sep=',', names=self.column_names, header=0)
         df['income'] = df['income'].replace({' - 50000.': 0, ' 50000+.': 1})
         return df
 
-    def read_test_data(self):
+    def read_test_data(self) -> pd.DataFrame():
         df = pd.read_csv(self.file_path_test_data, sep=',', names=self.column_names, header=0)
         df['income'] = df['income'].replace({' - 50000.': 0, ' 50000+.': 1})
         return df
 
-    def preprocess_train_data(self, scaler_type: str):
+    def preprocess_train_data(self, scaler_type: str) -> pd.DataFrame():
         train_data = self.read_train_data()
 
         X = train_data.drop('income', axis=1)
@@ -186,18 +207,27 @@ class DataSet4:
         # zapytaj !!!!!!!!!!!
 
         # X = X.replace('?', str("NaN"))
-        X = X.replace('?', np.nan)
+        X = X.replace(['Not in universe', '?', 'Not in universe or children', 'Do not know',
+                       'Not in universe under 1 year old', 'NA'], np.nan)
+
+        for column in ['hispanic_Origin', 'cb_father', 'cbirth_mother', 'cb_self']:
+            X[column].fillna(X[column].mode()[0], inplace=True)
+
+        X["cap_gain"] = np.where(X['capital_gains'] > 0, 1, 0)
+        X["cap_loss"] = np.where(X['capital_losses'] > 0, 1, 0)
+        X["dividend"] = np.where(X['divdends_stocks'] > 0, 1, 0)
+        X["stat"] = np.where(X['taxable_income'] != '- 50000.', 1, 0)
 
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
 
-        scaler = ScalerSelector(scaler_type).get_scaler()
+        scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X_dummy)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X_dummy.columns)
 
         return df
 
-    def preprocess_test_data(self, scaler_type: str):
+    def preprocess_test_data(self, scaler_type: str) -> pd.DataFrame():
         test_data = self.read_train_data()
 
         X = test_data.drop('income', axis=1)
@@ -206,7 +236,7 @@ class DataSet4:
         X = X.replace('?', np.nan)
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
 
-        scaler = ScalerSelector(scaler_type).get_scaler()
+        scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X_dummy)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X_dummy.columns)
@@ -225,17 +255,17 @@ class ScaledDataFrameBuilder:
 
 
 class ScalerSelector:
-    def __init__(self, scaler_type):
-        self.scaler_type = scaler_type
 
-    def get_scaler(self):
-        if self.scaler_type == 'StandardScaler':
+    @staticmethod
+    def get_scaler(scaler_type: str):
+
+        if scaler_type == 'StandardScaler':
             return StandardScaler()
-        elif self.scaler_type == 'MinMaxScaler':
+        elif scaler_type == 'MinMaxScaler':
             return MinMaxScaler()
-        elif self.scaler_type == 'RobustScaler':
+        elif scaler_type == 'RobustScaler':
             return RobustScaler()
-        elif self.scaler_type == 'Normalizer':
+        elif scaler_type == 'Normalizer':
             return Normalizer(norm='l1')
         else:
             raise ValueError('Invalid scaler type specified.')
@@ -260,7 +290,7 @@ class DataSplitter:
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
             if dict_columns is True:
-                return X_train, X_test, y_train, y_test, list(data_set.columns)
+                return X_train, X_test, y_train, y_test, list(data_set.columns[:-1])
             else:
                 return X_train, X_test, y_train, y_test
 
@@ -271,7 +301,7 @@ class DataSplitter:
             y_test = np.array(data_set_if_pre['y'])
 
             if dict_columns is True:
-                return X_train, X_test, y_train, y_test, list(data_set.columns)
+                return X_train, X_test, y_train, y_test, list(data_set.columns[:-1])
             else:
                 return X_train, X_test, y_train, y_test
         else:
@@ -279,7 +309,7 @@ class DataSplitter:
 
         # connect somehow with returing columns
 
-    @staticmethod
+    """@staticmethod
     def return_columns(data_set: pd.DataFrame(),
                        data_set_if_pre: pd.DataFrame() = None,
                        pre_split=False):
@@ -288,7 +318,7 @@ class DataSplitter:
             return list(data_set.columns[:-1])
         if pre_split:
             return {'columns_train': data_set.columns,
-                    'columns_test': data_set_if_pre.columns}
+                    'columns_test': data_set_if_pre.columns}"""
 
 
 class SubDataFrameGenerator:

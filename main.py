@@ -63,8 +63,8 @@ if __name__ == '__main__':
     # forward_subset_selection_ds1 = fss.evaluate_model(sample_dataset)
     # fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
     # xd = fss.evaluate_model(sample_dataset)
-    # bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
-    # xd = bss.evaluate_model(sample_dataset)
+    bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+    xd = bss.evaluate_model(sample_dataset)
 
     # log_df.to_csv("log_df.csv", decimal=".", sep="|", mode='a')
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # bf = ml.BruteForce(feature_criterion='p_value', criterion_val='0.2')
     # bf = ml.BruteForce(feature_criterion='pseudo_R_square', criterion_val='0.2')
     # xd = bf.evaluate_model(df=sample_dataset)
-    xd = kross_val.eval_cross_validation_train(sample_dataset)
+    # xd = kross_val.eval_cross_validation_train(sample_dataset)
 
     print(xd)
 

@@ -27,6 +27,6 @@ for data_set in data_set_list:
 
             ds = do.DataSplitter().split_data(data_set=data_set, pre_split=False)
         else:
-            data = data_set.preprocess_data(scaler_type=norm)
+            # data = data_set.preprocess_data(scaler_type=norm)
             ds = do.DataSplitter().split_data(data_set=data_set, pre_split=False)
 # ml.
