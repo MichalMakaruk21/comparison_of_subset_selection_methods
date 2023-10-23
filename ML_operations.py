@@ -48,7 +48,7 @@ class StepwiseSelection(object):
 
         # add statement for backward
         return scores_dict['columns'][scores_dict['scores'].idxmin(axis=0)] if \
-            subset_selection == "forward" else scores_dict['columns'][scores_dict['scores'].idxmin(axis=0)]
+            subset_selection == "forward" else scores_dict['columns'][scores_dict['scores'].idxmax(axis=0)]
 
     def count_model_criterion(self,
                               X_train: list,
@@ -400,7 +400,7 @@ class BackwardStepwiseSelection(StepwiseSelection):
         # some features are selected because of low p_val, but model criterion already checked that dropping
         # these features have no or negative effects on model
         filtered_features = list(filter(lambda idx: idx not in not_dropped_features, selected_features))
-
+        print(len(filtered_features))
         for feature in filtered_features:
             # print(f"feature id: {feature}")
             # print(f"remaining_features: {remaining_features}")
@@ -431,8 +431,8 @@ class BackwardStepwiseSelection(StepwiseSelection):
                 scores_dict = pd.concat([scores_dict, new_row_df], ignore_index=True)
 
         # pd.set_option('display.float_format', '{:.2f}'.format)
-
-        id_min = scores_dict['scores'].idxmin(axis=0)
+        # DO NAPRAWY
+        id_min = scores_dict['scores'].idmin(axis=0)
 
         # print(id_min)
         return scores_dict['columns'][id_min], scores_dict['scores'][id_min]

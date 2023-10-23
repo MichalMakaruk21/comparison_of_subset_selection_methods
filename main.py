@@ -29,6 +29,8 @@ bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-v
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    start = time.time()
+    print("Pipeline start")
 
     sample_dataset = d1.preprocess_data(scaler_type='StandardScaler')
     # sample_dataset = d2.preprocess_data(scaler_type='StandardScaler')
@@ -48,8 +50,7 @@ if __name__ == '__main__':
         display(df_logs) 
         """
 
-    start = time.time()
-    print("Pipeline start")
+
     # df_logs = fss.select_subset(data_set=sample_dataset)
     # log = fss.logs_df
 
