@@ -551,29 +551,17 @@ class Lasso:
     @staticmethod
     def perform_lasso_logistic_regression(df: pd.DataFrame(),
                                           df_pre_split: pd.DataFrame() = None,
-                                          pre_split=False):
-
+                                          pre_split=None):
         metrics_calculator = SelectedMetrics()
 
-        if pre_split:
-            X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
-                                                             data_set_if_pre=df_pre_split,
-                                                             pre_split=pre_split)
-            model = LogisticRegression(penalty='l1', solver='liblinear')
-            train = model.fit(X_train, y_train)
+        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
+                                                         data_set_if_pre=df_pre_split,
+                                                         pre_split=pre_split)
+        model = LogisticRegression(penalty='l1', solver='liblinear')
+        train = model.fit(X_train, y_train)
 
-            y_predict = train.predict(X_test)
-            return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
-
-        if not pre_split:
-            X_train, X_test, y_train, y_test = ds.split_data(data_set=df, pre_split=pre_split)
-            model = LogisticRegression(penalty='l1', solver='liblinear')
-
-            train = model.fit(X_train, y_train)
-
-            y_predict = train.predict(X_test)
-
-            return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
+        y_predict = train.predict(X_test)
+        return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
 
 class CrossValidation:
@@ -603,59 +591,56 @@ class CrossValidation:
 
 
 class FeaturePermutation:
-    @staticmethod
-    def perform_selection_based_on_permutation(df: pd.DataFrame(),
-                                               df_pre_split: pd.DataFrame() = None,
-                                               pre_split=False):
 
-        model = LogisticRegression()
+    def __init__(self):
+        pass
 
-        if pre_split:
-            X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
-                                                             data_set_if_pre=df_pre_split,
-                                                             pre_split=pre_split)
+    def evaluate_model(self,
+                       df: pd.DataFrame(),
+                       df_pre_split: pd.DataFrame() = None,
+                       pre_split=False) -> pd.DataFrame():
 
-            perm_imp = permutation_importance(model,
-                                              X_test,
-                                              y_test,
-                                              n_repeats=30,
-                                              random_state=42)
-            return
+        metrics_calculator = SelectedMetrics()
 
-        if not pre_split:
-            X_train, X_test, y_train, y_test, columns = ds.split_data(data_set=df,
-                                                                      data_set_if_pre=df_pre_split,
-                                                                      pre_split=pre_split,
-                                                                      dict_columns=True)
+        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
+                                                         data_set_if_pre=df_pre_split,
+                                                         pre_split=pre_split)
 
-            # df_columns = ds.return_columns(data_set=df, pre_split=False)
+        selected_features = self.perform_selection_based_on_permutation(X_train=X_train,
+                                                                        y_train=y_train)
 
-            train = model.fit(X_train, y_train)
-            y_predict = train.predict(X_test)
+        X_train = self.select_based_on_idx(X_train, selected_features)
+        X_test = self.select_based_on_idx(X_test, selected_features)
 
-            conf_matrix_metrics = SelectedMetrics().return_conf_matrix_related_metrics(y_test=y_test,
-                                                                                       y_predict=y_predict)
-            print(conf_matrix_metrics)
-            orginal_accuracy = conf_matrix_metrics['accuracy']
-            orginal_f1 = conf_matrix_metrics['f1_score']
+        model = LogisticRegression(solver='liblinear')
+        result = model.fit(X_train, y_train)
 
-            X_test_with_columns = pd.DataFrame(data=X_test, columns=columns)
+        y_predict = result.predict(X_test)
 
-            result = permutation_importance(model, X_test, y_test, n_repeats=10, random_state=42)
+        return metrics_calculator.return_conf_matrix_related_metrics(y_true=y_test, y_predict=y_predict)
 
-            # importance_scores = result.importances_mean
-            # for feature, importance_score in zip(range(X_test_with_columns.shape[1]), importance_scores):
-            #     print(f"Feature {feature}: {importance_score:.4f}")
+    def perform_selection_based_on_permutation(self,
+                                               X_train: list,
+                                               y_train: list) -> list:
 
-            feature_importance_df = pd.DataFrame(
-                {"Feature": range(X_test_with_columns.shape[1]), "Importance": result.importances_mean}
-            )
+        model = LogisticRegression(solver='liblinear').fit(X_train, y_train)
 
-            feature_importance_df = feature_importance_df[feature_importance_df['Importance'] > 0.05]
+        result = permutation_importance(model,
+                                        X_train,
+                                        y_train,
+                                        n_repeats=30,
+                                        random_state=42)
 
-            print(feature_importance_df)
+        importance_mean_top = sorted(range(len(result.importances_mean)),
+                                     key=lambda i: result.importances_mean[i], reverse=True)[:5]
 
-            return "done"
+        return importance_mean_top
+
+    def select_based_on_idx(self,
+                            x_set: np.array,
+                            feature_list: list):
+        feature_list = list(map(int, feature_list))
+        return x_set[:, feature_list]
 
 
 class BruteForce:
