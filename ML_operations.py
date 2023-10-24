@@ -591,29 +591,15 @@ class CrossValidation:
 
         model = LogisticRegression()
 
-        k_folds = KFold(n_splits=split_count)
+        # without specific and negative predictive value
+        scoring = ['recall', 'precision', 'accuracy', 'balanced_accuracy', 'f1']
 
-        tp = tn = fp = fn = []
+        scores = cross_validate(model, X, y, cv=10, scoring=scoring)
+        print(scores.keys())
 
-        print(k_folds.split(X))
+        print(scores)
 
-        for train_index, test_index in k_folds.split(X):
-            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
-
-            # Calculate confusion matrix for the current fold
-            cm = confusion_matrix(y_test, y_pred)
-
-            # Update true positives, true negatives, false positives, and false negatives
-            tp.append(cm[1, 1])
-            tn.append(cm[0, 0])
-            fp.append(cm[0, 1])
-            fn.append(cm[1, 0])
-
-        return metrics_calculator.return_conf_matrix_related_metrics_for_cross(_tp=tp, _tn=tn, _fp=fp, _fn=fn)
+        return metrics_calculator.return_conf_matrix_related_metrics_for_cross(scores=scores)
 
 
 class FeaturePermutation:
@@ -749,19 +735,21 @@ class SelectedMetrics:
         return self.metrics
 
     def return_conf_matrix_related_metrics_for_cross(self,
-                                                     _tn: list,
-                                                     _fp: list,
-                                                     _fn: list,
-                                                     _tp: list):
+                                                     scores):
+        new_row = {'recall': [np.mean(scores['test_recall'])],
+                   'precision': [np.mean(scores['test_precision'])],
+                   'specificity': [np.nan],
+                   'negative_predictive_value': [np.nan],
+                   'accuracy': [np.mean(scores['test_accuracy'])],
+                   'balanced_accuracy': [np.mean(scores['test_balanced_accuracy'])],
+                   'f1_score': [np.mean(scores['test_f1'])]
+                   }
+        new_row_df = pd.DataFrame(new_row)
 
-        for tn, fp, fn, tp in zip(_tn, _fp, _fn, _tp):
-            self.calculate_metrics(tn=tn,
-                                   fp=fp,
-                                   fn=fn,
-                                   tp=tp)
+        self.metrics = pd.concat([self.metrics, new_row_df], ignore_index=True)
 
-        mean_values = self.metrics.iloc[:-1].mean()
-        self.metrics = pd.DataFrame(mean_values).T
+        if (self.metrics.loc[0] == 0).all():
+            self.metrics.drop(index=0, axis=0, inplace=True)
 
         return self.metrics
 
