@@ -206,25 +206,19 @@ class DataSet4(DataSet):
         # these column will be transformed into dummy variables or dropped
         # zapytaj !!!!!!!!!!!
 
-        # X = X.replace('?', str("NaN"))
         X = X.replace(['Not in universe', '?', 'Not in universe or children', 'Do not know',
                        'Not in universe under 1 year old', 'NA'], np.nan)
 
-        for column in ['hispanic_Origin', 'cb_father', 'cbirth_mother', 'cb_self']:
-            X[column].fillna(X[column].mode()[0], inplace=True)
-
+        X['hispanic_Origin'].fillna(X['hispanic_Origin'].mode()[0], inplace=True)
         X["cap_gain"] = np.where(X['capital_gains'] > 0, 1, 0)
         X["cap_loss"] = np.where(X['capital_losses'] > 0, 1, 0)
-        X["dividend"] = np.where(X['divdends_stocks'] > 0, 1, 0)
-        X["stat"] = np.where(X['taxable_income'] != '- 50000.', 1, 0)
 
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
-
         scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X_dummy)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X_dummy.columns)
-
+        print('preprocess_finished')
         return df
 
     def preprocess_test_data(self, scaler_type: str) -> pd.DataFrame():
@@ -233,7 +227,13 @@ class DataSet4(DataSet):
         X = test_data.drop('income', axis=1)
         y = test_data['income']
 
-        X = X.replace('?', np.nan)
+        X = X.replace(['Not in universe', '?', 'Not in universe or children', 'Do not know',
+                       'Not in universe under 1 year old', 'NA'], np.nan)
+
+        X['hispanic_Origin'].fillna(X['hispanic_Origin'].mode()[0], inplace=True)
+        X["cap_gain"] = np.where(X['capital_gains'] > 0, 1, 0)
+        X["cap_loss"] = np.where(X['capital_losses'] > 0, 1, 0)
+
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
 
         scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)

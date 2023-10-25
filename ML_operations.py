@@ -1,3 +1,5 @@
+import os
+
 import data_operations as do
 import pandas as pd
 import numpy as np
@@ -9,6 +11,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.inspection import permutation_importance
 import statsmodels.api as sm
 import math
+
+# TO DELETE !!!!!!!!!!!!!
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 ds = do.DataSplitter()
 sub_df = do.SubDataFrameGenerator()
@@ -167,6 +173,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
             # print(f"selected_features: {selected_features}")
         # return X_train, X_test, y_train, y_test
+            print(f"selected_features: {selected_features}")
         return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
             self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
                                                                   0] == "pseudo_R_square"
@@ -196,8 +203,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
                 result = model.fit(disp=False)
             except Exception:
                 temp_df = pd.DataFrame(data=X_subset, columns=selected_features + [int(feature)])
-                print(temp_df.describe())
-                print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
+                # print(temp_df.describe())
+                # print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
 
             else:
 
@@ -557,6 +564,7 @@ class Lasso:
         X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
                                                          data_set_if_pre=df_pre_split,
                                                          pre_split=pre_split)
+        print('l1 start')
         model = LogisticRegression(penalty='l1', solver='liblinear')
         train = model.fit(X_train, y_train)
 
@@ -572,7 +580,6 @@ class CrossValidation:
     @staticmethod
     def eval_cross_validation_train(df: pd.DataFrame()):
         metrics_calculator = SelectedMetrics()
-        split_count = 10
 
         X = df.drop(['y'], axis=1)
         y = df['y']
@@ -583,9 +590,9 @@ class CrossValidation:
         scoring = ['recall', 'precision', 'accuracy', 'balanced_accuracy', 'f1']
 
         scores = cross_validate(model, X, y, cv=10, scoring=scoring)
-        print(scores.keys())
 
-        print(scores)
+        # print(scores.keys())
+        # print(scores)
 
         return metrics_calculator.return_conf_matrix_related_metrics_for_cross(scores=scores)
 
@@ -599,7 +606,6 @@ class FeaturePermutation:
                        df: pd.DataFrame(),
                        df_pre_split: pd.DataFrame() = None,
                        pre_split=False) -> pd.DataFrame():
-
         metrics_calculator = SelectedMetrics()
 
         X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
@@ -622,7 +628,6 @@ class FeaturePermutation:
     def perform_selection_based_on_permutation(self,
                                                X_train: list,
                                                y_train: list) -> list:
-
         model = LogisticRegression(solver='liblinear').fit(X_train, y_train)
 
         result = permutation_importance(model,
@@ -671,7 +676,7 @@ class BruteForce:
         selected_features_idx = [idx for idx, feature in enumerate(result.pvalues) if
                                  feature <= float(self.criterion_val)]
 
-        print(selected_features_idx)
+        # print(selected_features_idx)
 
         X_train = X_train[:, selected_features_idx]
         X_test = X_test[:, selected_features_idx]
@@ -706,11 +711,22 @@ class SelectedMetrics:
                                      'balanced_accuracy': [float()],
                                      'f1_score': [float()]})
 
+        self.eval_metrics = pd.DataFrame({'data_set': [str],
+                                          'selected_method': [str],
+                                          'recall': [float()],
+                                          'precision': [float()],
+                                          'specificity': [float()],
+                                          'negative_predictive_value': [float()],
+                                          'accuracy': [float()],
+                                          'balanced_accuracy': [float()],
+                                          'f1_score': [float()]})
+        self.csv_file = 'eval_metrics.csv'
+
     def return_conf_matrix_related_metrics(self,
                                            y_true: list,
                                            y_predict: list):
         tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_predict).ravel()
-
+        print(tn, fp, fn, tp)
         self.calculate_metrics(tn=tn,
                                fp=fp,
                                fn=fn,
@@ -764,3 +780,26 @@ class SelectedMetrics:
         self.metrics.reset_index(drop=True, inplace=True)
 
         pass
+
+    def append_metrics(self,
+                       data_set: str,
+                       selection_method: str,
+                       metrics_df: pd.DataFrame()
+                       ) -> pd.DataFrame():
+
+        new_row = {'data_set': data_set, 'selected_method': selection_method}
+
+        # Copy the values from the last row of the 'metrics_df'
+        for col in self.metrics.columns:
+            if col in metrics_df.columns:
+                new_row[col] = metrics_df.iloc[-1][col]
+
+        # Append the new row to 'eval_metrics' DataFrame
+        self.eval_metrics = self.eval_metrics.append(new_row, ignore_index=True)
+
+        if os.path.isfile(self.csv_file):
+            self.eval_metrics.to_csv(self.csv_file, mode='a', header=False, index=False, sep='|')
+        else:
+            self.eval_metrics.to_csv(self.csv_file, index=False, sep='|')
+
+        return self.eval_metrics

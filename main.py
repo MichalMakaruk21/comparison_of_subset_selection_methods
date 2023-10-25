@@ -20,22 +20,26 @@ comb_generator = d.SubDataFrameGenerator()
 lasso = ml.Lasso()
 cross_val = ml.CrossValidation()
 fp = ml.FeaturePermutation()
-# fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
+bf = ml.BruteForce(criterion_val='0.05')
+fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
 # bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
 
-
-
+# d4_train_standard = d4.preprocess_train_data(scaler_type='StandardScaler')
+    # d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
+# xd = lasso.perform_lasso_logistic_regression(df=d4_train_standard, df_pre_split=d4_test_standard, pre_split=True)
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     start = time.time()
     print("Pipeline start")
 
-    sample_dataset = d1.preprocess_data(scaler_type='StandardScaler')
+    d1_standard = d1.preprocess_data(scaler_type='StandardScaler')
+    d2_standard = d2.preprocess_data(scaler_type='StandardScaler')
+    d3_standard = d3.preprocess_data(scaler_type='StandardScaler')
 
-    # xd = cross_val.eval_cross_validation_train(sample_dataset)
-
-    xd = fp.evaluate_model(sample_dataset)
+    # xd = lasso.perform_lasso_logistic_regression(d2_standard)
+    xd = fss.evaluate_model(d2_standard)
+    # xd = bf.evaluate_model(sample_dataset)
     print(xd)
 
     end = time.time()
