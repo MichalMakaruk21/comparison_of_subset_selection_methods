@@ -4,6 +4,7 @@ import data_operations as do
 import pandas as pd
 import numpy as np
 import sklearn
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LassoCV
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import KFold, cross_validate, cross_val_score
@@ -15,11 +16,11 @@ import random
 
 # TO DELETE !!!!!!!!!!!!!
 import warnings
+
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-ds = do.DataSplitter()
-sub_df = do.SubDataFrameGenerator()
+# sub_df = do.SubDataFrameGenerator()
 
 
 class StepwiseSelection(object):
@@ -130,10 +131,10 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         # print(f'columns len: {len(ds.return_columns(data_set=df))}')
 
-        X_train, X_test, y_train, y_test, columns = ds.split_data(data_set=df,
-                                                                  data_set_if_pre=df_pre_split,
-                                                                  pre_split=pre_split,
-                                                                  dict_columns=True)
+        X_train, X_test, y_train, y_test, columns = DataSplitter().split_data(data_set=df,
+                                                                              data_set_if_pre=df_pre_split,
+                                                                              pre_split=pre_split,
+                                                                              dict_columns=True)
 
         init_best_feature_index = super().get_feature_criterion_for_init_model(X_train,
                                                                                y_train,
@@ -160,7 +161,6 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                          selected_features,
                                                          remaining_features)
             if score is np.nan:
-
                 break
 
             #  X_subset_with_best_feature_added = X_train[selected_features + [int(feature)]]
@@ -177,7 +177,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
             # print(best_model_score)
 
             # print(f"selected_features: {selected_features}")
-        # return X_train, X_test, y_train, y_test
+            # return X_train, X_test, y_train, y_test
             print(f"selected_features: {selected_features}")
             print(f"remaining_features: {remaining_features}")
         return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
@@ -352,10 +352,10 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         # print(f'columns len: {len(ds.return_columns(data_set=df))}')
 
-        X_train, X_test, y_train, y_test, columns = ds.split_data(data_set=df,
-                                                                  data_set_if_pre=df_pre_split,
-                                                                  pre_split=pre_split,
-                                                                  dict_columns=True)
+        X_train, X_test, y_train, y_test, columns = DataSplitter().split_data(data_set=df,
+                                                                              data_set_if_pre=df_pre_split,
+                                                                              pre_split=pre_split,
+                                                                              dict_columns=True)
 
         init_worst_feature_index = super().get_feature_criterion_for_init_model(X_train,
                                                                                 y_train,
@@ -571,9 +571,9 @@ class Lasso:
                                           pre_split=None):
         metrics_calculator = SelectedMetrics()
 
-        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
-                                                         data_set_if_pre=df_pre_split,
-                                                         pre_split=pre_split)
+        X_train, X_test, y_train, y_test = DataSplitter().split_data(data_set=df,
+                                                                     data_set_if_pre=df_pre_split,
+                                                                     pre_split=pre_split)
         print('l1 start')
         model = LogisticRegression(penalty='l1', solver='liblinear')
         train = model.fit(X_train, y_train)
@@ -618,9 +618,9 @@ class FeaturePermutation:
                        pre_split=False) -> pd.DataFrame():
         metrics_calculator = SelectedMetrics()
 
-        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
-                                                         data_set_if_pre=df_pre_split,
-                                                         pre_split=pre_split)
+        X_train, X_test, y_train, y_test = DataSplitter().split_data(data_set=df,
+                                                                     data_set_if_pre=df_pre_split,
+                                                                     pre_split=pre_split)
 
         selected_features = self.perform_selection_based_on_permutation(X_train=X_train,
                                                                         y_train=y_train)
@@ -676,9 +676,9 @@ class BruteForce:
                       df_pre_split: pd.DataFrame() = None,
                       pre_split=False
                       ):
-        X_train, X_test, y_train, y_test = ds.split_data(data_set=df,
-                                                         data_set_if_pre=df_pre_split,
-                                                         pre_split=pre_split)
+        X_train, X_test, y_train, y_test = DataSplitter().split_data(data_set=df,
+                                                                     data_set_if_pre=df_pre_split,
+                                                                     pre_split=pre_split)
 
         model = sm.Logit(y_train, X_train)
         result = model.fit(disp=False)
@@ -812,3 +812,42 @@ class SelectedMetrics:
             self.eval_metrics.to_csv(self.csv_file_path, index=False, sep='|')
 
         return self.eval_metrics
+
+
+class DataSplitter:
+    """
+    Objective split parameter setter
+    """
+
+    @staticmethod
+    def split_data(data_set: pd.DataFrame() = None,
+                   data_set_if_pre: pd.DataFrame() = None,
+                   test_size=0.2,
+                   random_state=21,
+                   pre_split: bool = False,
+                   dict_columns: bool = False):
+        if not pre_split:
+            X = np.array((data_set.drop(['y'], axis=1)))
+            y = np.array((data_set['y']))
+
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+            if dict_columns is True:
+                return X_train, X_test, y_train, y_test, list(data_set.columns[:-1])
+            else:
+                return X_train, X_test, y_train, y_test
+
+        elif pre_split:
+            X_train = np.array(data_set.drop(['y'], axis=1))
+            X_test = np.array(data_set_if_pre.drop(['y'], axis=1))
+            y_train = np.array(data_set['y'])
+            y_test = np.array(data_set_if_pre['y'])
+
+            if dict_columns is True:
+                return X_train, X_test, y_train, y_test, list(data_set.columns[:-1])
+            else:
+                return X_train, X_test, y_train, y_test
+        else:
+            raise ValueError(f'Incorrect parameters')
+
+

@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, Normalizer
-from sklearn.model_selection import train_test_split
 import itertools
 
 
@@ -285,54 +284,8 @@ class ScalerSelector:
             raise ValueError('Invalid scaler type specified.')
 
 
-class DataSplitter:
-    """
-    Objective split parameter setter
-    """
 
-    @staticmethod
-    def split_data(data_set: pd.DataFrame() = None,
-                   data_set_if_pre: pd.DataFrame() = None,
-                   test_size=0.2,
-                   random_state=21,
-                   pre_split: bool = False,
-                   dict_columns: bool = False):
-        if not pre_split:
-            X = np.array((data_set.drop(['y'], axis=1)))
-            y = np.array((data_set['y']))
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-
-            if dict_columns is True:
-                return X_train, X_test, y_train, y_test, list(data_set.columns[:-1])
-            else:
-                return X_train, X_test, y_train, y_test
-
-        elif pre_split:
-            X_train = np.array(data_set.drop(['y'], axis=1))
-            X_test = np.array(data_set_if_pre.drop(['y'], axis=1))
-            y_train = np.array(data_set['y'])
-            y_test = np.array(data_set_if_pre['y'])
-
-            if dict_columns is True:
-                return X_train, X_test, y_train, y_test, list(data_set.columns[:-1])
-            else:
-                return X_train, X_test, y_train, y_test
-        else:
-            raise ValueError(f'Incorrect parameters')
-
-        # connect somehow with returing columns
-
-    """@staticmethod
-    def return_columns(data_set: pd.DataFrame(),
-                       data_set_if_pre: pd.DataFrame() = None,
-                       pre_split=False):
-
-        if not pre_split:
-            return list(data_set.columns[:-1])
-        if pre_split:
-            return {'columns_train': data_set.columns,
-                    'columns_test': data_set_if_pre.columns}"""
 
 
 class SubDataFrameGenerator:
