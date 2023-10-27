@@ -11,10 +11,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.inspection import permutation_importance
 import statsmodels.api as sm
 import math
+import random
 
 # TO DELETE !!!!!!!!!!!!!
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 ds = do.DataSplitter()
 sub_df = do.SubDataFrameGenerator()
@@ -157,6 +159,9 @@ class ForwardStepwiseSelection(StepwiseSelection):
                                                          y_train,
                                                          selected_features,
                                                          remaining_features)
+            if score is np.nan:
+
+                break
 
             #  X_subset_with_best_feature_added = X_train[selected_features + [int(feature)]]
 
@@ -174,6 +179,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
             # print(f"selected_features: {selected_features}")
         # return X_train, X_test, y_train, y_test
             print(f"selected_features: {selected_features}")
+            print(f"remaining_features: {remaining_features}")
         return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
             self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
                                                                   0] == "pseudo_R_square"
@@ -217,11 +223,15 @@ class ForwardStepwiseSelection(StepwiseSelection):
                 scores_dict = pd.concat([scores_dict, new_row_df], ignore_index=True)
 
         # pd.set_option('display.float_format', '{:.2f}'.format)
+        if not scores_dict['scores'].isna().all():
 
-        id_min = scores_dict['scores'].idxmin(axis=0)
-        # print(scores_dict)
-        # print(id_min)
-        return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
+            id_min = scores_dict['scores'].idxmin(axis=0)
+            # print(scores_dict)
+            # print(id_min)
+            return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
+        # ugly but dataset 2 is retarded
+        else:
+            return random.choice(remaining_features), np.nan
 
     def model_criterion_eval(self,
                              y,
@@ -710,7 +720,6 @@ class SelectedMetrics:
                                      'accuracy': [float()],
                                      'balanced_accuracy': [float()],
                                      'f1_score': [float()]})
-
         self.eval_metrics = pd.DataFrame({'data_set': [str],
                                           'selected_method': [str],
                                           'recall': [float()],
@@ -720,7 +729,7 @@ class SelectedMetrics:
                                           'accuracy': [float()],
                                           'balanced_accuracy': [float()],
                                           'f1_score': [float()]})
-        self.csv_file = 'eval_metrics.csv'
+        self.csv_file_path = 'eval_metrics.csv'
 
     def return_conf_matrix_related_metrics(self,
                                            y_true: list,
@@ -797,9 +806,9 @@ class SelectedMetrics:
         # Append the new row to 'eval_metrics' DataFrame
         self.eval_metrics = self.eval_metrics.append(new_row, ignore_index=True)
 
-        if os.path.isfile(self.csv_file):
-            self.eval_metrics.to_csv(self.csv_file, mode='a', header=False, index=False, sep='|')
+        if os.path.isfile(self.csv_file_path):
+            self.eval_metrics.to_csv(self.csv_file_path, mode='a', header=False, index=False, sep='|')
         else:
-            self.eval_metrics.to_csv(self.csv_file, index=False, sep='|')
+            self.eval_metrics.to_csv(self.csv_file_path, index=False, sep='|')
 
         return self.eval_metrics

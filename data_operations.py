@@ -89,14 +89,20 @@ class DataSet2(DataSet):
         y = data['class']
 
         # nan values are represented by "?"
-        # replace '?" with 'nan' and fill using linear interpolation
+        # replace '?" with 'nan' and fill using linear interpolation or
+        # drop if linear interpolation would damage feature
+
         X = X.replace('?', np.nan)
+        columns_to_drop = X.isna().sum()[X.isna().sum() > 500].index
+
+        X = X.drop(columns_to_drop, axis=1)
+
         X = X[X.columns.tolist()].astype('float64')
         X = X.interpolate(method='linear', axis=1)
 
         scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X)
-
+        print(f"pre_return y : {y}")
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
 
         return df
@@ -213,6 +219,10 @@ class DataSet4(DataSet):
         X["cap_gain"] = np.where(X['capital_gains'] > 0, 1, 0)
         X["cap_loss"] = np.where(X['capital_losses'] > 0, 1, 0)
 
+        X = X.drop(['divdends_from_stocks', 'region_of_previous_residence',
+                    'state_of_previous_residence', 'country_of_birth_father', 'country_of_birth_mother',
+                    'country_of_birth_self', 'fill_inc_questionnaire_for_veterans_admin'], axis=1)
+
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
         scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X_dummy)
@@ -233,6 +243,10 @@ class DataSet4(DataSet):
         X['hispanic_Origin'].fillna(X['hispanic_Origin'].mode()[0], inplace=True)
         X["cap_gain"] = np.where(X['capital_gains'] > 0, 1, 0)
         X["cap_loss"] = np.where(X['capital_losses'] > 0, 1, 0)
+
+        X = X.drop(['divdends_from_stocks', 'region_of_previous_residence',
+                    'state_of_previous_residence', 'country_of_birth_father', 'country_of_birth_mother',
+                    'country_of_birth_self', 'fill_inc_questionnaire_for_veterans_admin'], axis=1)
 
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
 

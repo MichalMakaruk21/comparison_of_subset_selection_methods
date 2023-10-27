@@ -25,7 +25,7 @@ fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_va
 # bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
 
 # d4_train_standard = d4.preprocess_train_data(scaler_type='StandardScaler')
-    # d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
+# d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
 # xd = lasso.perform_lasso_logistic_regression(df=d4_train_standard, df_pre_split=d4_test_standard, pre_split=True)
 
 # Press the green button in the gutter to run the script.
@@ -33,17 +33,26 @@ if __name__ == '__main__':
     start = time.time()
     print("Pipeline start")
 
-    d1_standard = d1.preprocess_data(scaler_type='StandardScaler')
-    d2_standard = d2.preprocess_data(scaler_type='StandardScaler')
-    d3_standard = d3.preprocess_data(scaler_type='StandardScaler')
+    # d1_standard = d1.preprocess_data(scaler_type='StandardScaler')
+    # d2_standard = d2.preprocess_data(scaler_type='StandardScaler')
+    # d3_standard = d3.preprocess_data(scaler_type='StandardScaler')
+
+    d4_train_standard = d4.preprocess_train_data(scaler_type='StandardScaler')
+    d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
 
     # xd = lasso.perform_lasso_logistic_regression(d2_standard)
-    xd = fss.evaluate_model(d2_standard)
+
+    d4_train_standard_comb = comb_generator.generate_combinations(d4_train_standard)
+    print(len(d4_train_standard_comb))
+    for combination in d4_train_standard_comb:
+        train = comb_generator.return_sub_df(d4_train_standard, combination)
+        test = comb_generator.return_sub_df(d4_train_standard, combination)
+        xd = fss.evaluate_model(df=train, df_pre_split=test, pre_split=True)
     # xd = bf.evaluate_model(sample_dataset)
     print(xd)
 
     end = time.time()
-    print(f"Pipeline exec time: {end - start}")
+    print(f"Pipeline exec time: {(end - start) / 60} min")
 
     # print(xd)
 
