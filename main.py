@@ -20,7 +20,7 @@ comb_generator = d.SubDataFrameGenerator()
 lasso = ml.Lasso()
 cross_val = ml.CrossValidation()
 fp = ml.FeaturePermutation()
-bf = ml.BruteForce(criterion_val='0.05')
+bf = ml.BruteForce(criterion_val=0.6)
 fss = ml.ForwardStepwiseSelection(model_criterion='AIC', feature_criterion='p_value')
 # bss = ml.BackwardStepwiseSelection(model_criterion='AIC', feature_criterion='p-value')
 
@@ -40,7 +40,13 @@ if __name__ == '__main__':
     # d4_train_standard = d4.preprocess_train_data(scaler_type='StandardScaler')
     # d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
 
+    clc = ml.SelectedMetrics()
+
     xd = lasso.perform_lasso_logistic_regression(d1_standard)
+    clc.append_metrics("data_set1", "lasso", xd)
+    xd2 = bf.evaluate_model(d1_standard)
+    dx = clc.append_metrics("data_set_1", "brute_force", xd2)
+    print(dx)
     """
     d4_train_standard_comb = comb_generator.generate_combinations(d4_train_standard)
     print(len(d4_train_standard_comb))

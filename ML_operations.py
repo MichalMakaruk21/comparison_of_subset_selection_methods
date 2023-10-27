@@ -178,8 +178,8 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
             # print(f"selected_features: {selected_features}")
             # return X_train, X_test, y_train, y_test
-            print(f"selected_features: {selected_features}")
-            print(f"remaining_features: {remaining_features}")
+            # print(f"selected_features: {selected_features}")
+            # print(f"remaining_features: {remaining_features}")
         return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
             self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
                                                                   0] == "pseudo_R_square"
@@ -268,7 +268,7 @@ class ForwardStepwiseSelection(StepwiseSelection):
 
         elif self.model_criterion == "BIC":
 
-            if model_criterion_val > best_model_score:
+            if model_criterion_val < best_model_score:
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
@@ -434,8 +434,8 @@ class BackwardStepwiseSelection(StepwiseSelection):
             except Exception:
 
                 temp_df = pd.DataFrame(data=X_subset, columns=feature_list)
-                print(temp_df.describe())
-                print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
+                # print(temp_df.describe())
+                # print([temp_df.iloc[i, j] for i, j in zip(*np.where(pd.isnull(temp_df)))])
 
             else:
 
@@ -449,10 +449,13 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         # pd.set_option('display.float_format', '{:.2f}'.format)
         # DO NAPRAWY
-        id_min = scores_dict['scores'].idmin(axis=0)
+
+
+
+        id_max = scores_dict['scores'].idxmax(axis=0)
 
         # print(id_min)
-        return scores_dict['columns'][id_min], scores_dict['scores'][id_min]
+        return scores_dict['columns'][id_max], scores_dict['scores'][id_max]
 
     def model_criterion_eval(self,
                              y,
@@ -475,9 +478,8 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         if self.model_criterion == "AIC":
 
-            if model_criterion_val > best_model_score:
+            if model_criterion_val < best_model_score:
                 best_model_score = model_criterion_val
-
                 selected_features = test_feature_set
                 remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
 
@@ -491,7 +493,7 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         elif self.model_criterion == "BIC":
 
-            if model_criterion_val > best_model_score:
+            if model_criterion_val < best_model_score:
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
@@ -508,11 +510,11 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         elif self.model_criterion == "pseudo_R_square":
 
-            print(f"test_feature_set: {test_feature_set}")
-            print(f"remaining_features: {remaining_features}")
-            print(f"not_dropped_features: {not_dropped_features}")
+            # print(f"test_feature_set: {test_feature_set}")
+            # print(f"remaining_features: {remaining_features}")
+            # print(f"not_dropped_features: {not_dropped_features}")
 
-            if model_criterion_val < best_model_score:
+            if model_criterion_val > best_model_score:
                 best_model_score = model_criterion_val
 
                 selected_features = test_feature_set
@@ -574,7 +576,7 @@ class Lasso:
         X_train, X_test, y_train, y_test = DataSplitter().split_data(data_set=df,
                                                                      data_set_if_pre=df_pre_split,
                                                                      pre_split=pre_split)
-        print('l1 start')
+        # print('l1 start')
         model = LogisticRegression(penalty='l1', solver='liblinear')
         train = model.fit(X_train, y_train)
 
@@ -796,15 +798,20 @@ class SelectedMetrics:
                        metrics_df: pd.DataFrame()
                        ) -> pd.DataFrame():
 
+        # clear data before if csv exist in memory
+        if not self.eval_metrics.empty:
+            self.eval_metrics.drop(self.eval_metrics.index, inplace=True, axis=0)
+
         new_row = {'data_set': data_set, 'selected_method': selection_method}
 
         # Copy the values from the last row of the 'metrics_df'
         for col in self.metrics.columns:
             if col in metrics_df.columns:
                 new_row[col] = metrics_df.iloc[-1][col]
-
+        # self.logs_df = pd.concat([self.logs_df, pd.DataFrame([new_row])], ignore_index=True)
         # Append the new row to 'eval_metrics' DataFrame
-        self.eval_metrics = self.eval_metrics.append(new_row, ignore_index=True)
+        self.eval_metrics = pd.concat([self.eval_metrics, pd.DataFrame([new_row])], ignore_index=True)
+        # self.eval_metrics = self.eval_metrics.append(new_row, ignore_index=True)
 
         if os.path.isfile(self.csv_file_path):
             self.eval_metrics.to_csv(self.csv_file_path, mode='a', header=False, index=False, sep='|')
