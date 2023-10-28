@@ -1,0 +1,13 @@
+data_set|selected_method|recall|precision|specificity|negative_predictive_value|accuracy|balanced_accuracy|f1_score
+d3_standard|cross_validation|0.05|0.15|||0.9221166892808682|0.5177803379416284|0.07333333333333333
+d3_standard|lasso|0.0|0.0|0.9921875|0.9548872180451128|0.4980392156862745|0.49609375|
+d3_standard|feature_permutation|0.0||1.0|0.9552238805970149|0.5|0.5|
+d3_min_max|cross_validation|0.0|0.0|||0.9281094527363184|0.4975806451612904|0.0
+d3_min_max|lasso|0.0||1.0|0.9552238805970149|0.5|0.5|
+d3_min_max|feature_permutation|0.0||1.0|0.9552238805970149|0.5|0.5|
+d3_robust|cross_validation|0.0|0.0|||0.9265943012211668|0.4967741935483872|0.0
+d3_robust|lasso|0.0|0.0|0.9921875|0.9548872180451128|0.4980392156862745|0.49609375|
+d3_robust|feature_permutation|0.0||1.0|0.9552238805970149|0.5|0.5|
+d3_normalizer|cross_validation|0.0|0.0|||0.9326549072817729|0.5|0.0
+d3_normalizer|lasso|0.0||1.0|0.9552238805970149|0.5|0.5|
+d3_normalizer|feature_permutation|0.0||1.0|0.9552238805970149|0.5|0.5|
