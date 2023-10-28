@@ -34,20 +34,32 @@ if __name__ == '__main__':
     print("Pipeline start")
 
     d1_standard = d1.preprocess_data(scaler_type='StandardScaler')
-    # d2_standard = d2.preprocess_data(scaler_type='StandardScaler')
+    d2_standard = d2.preprocess_data(scaler_type='StandardScaler')
     # d3_standard = d3.preprocess_data(scaler_type='StandardScaler')
 
-    # d4_train_standard = d4.preprocess_train_data(scaler_type='StandardScaler')
-    # d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
+    d4_train_standard = d4.preprocess_train_data(scaler_type='StandardScaler')
+    d4_test_standard = d4.preprocess_test_data(scaler_type='StandardScaler')
 
+    # bss_pseudo_R = ml.BackwardStepwiseSelection(model_criterion='pseudo_R_square', feature_criterion='p_value')
+    # fss_R = ml.ForwardStepwiseSelection(model_criterion='pseudo_R_square', feature_criterion='p_value')
+    # xd = fss_R.evaluate_model(d2_standard)
+
+    xd = lasso.perform_lasso_logistic_regression(df=d4_train_standard, df_pre_split=d4_test_standard, pre_split=True)
+
+
+    # xd = bf.evaluate_model(d2_standard)
+
+    print(xd)
+    """
+    
     clc = ml.SelectedMetrics()
 
     xd = lasso.perform_lasso_logistic_regression(d1_standard)
     clc.append_metrics("data_set1", "lasso", xd)
     xd2 = bf.evaluate_model(d1_standard)
     dx = clc.append_metrics("data_set_1", "brute_force", xd2)
-    print(dx)
-    """
+    
+    
     d4_train_standard_comb = comb_generator.generate_combinations(d4_train_standard)
     print(len(d4_train_standard_comb))
     for combination in d4_train_standard_comb:

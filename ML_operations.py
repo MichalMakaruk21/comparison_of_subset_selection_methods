@@ -85,8 +85,7 @@ class StepwiseSelection(object):
             return result.bic
 
         elif self.model_criterion == "pseudo_R_square":
-            # 1 - (result.llnull / result.llf)
-            return (result.llf - result.llnull) / result.llf
+            return result.prsquared
 
     def select_based_on_idx(self,
                             x_set: np.array,
@@ -180,9 +179,9 @@ class ForwardStepwiseSelection(StepwiseSelection):
             # return X_train, X_test, y_train, y_test
             # print(f"selected_features: {selected_features}")
             # print(f"remaining_features: {remaining_features}")
+
         return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
-            self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
-                                                                  0] == "pseudo_R_square"
+            self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].any() == "pseudo_R_square"
             else self.logs_df["Model_criterion_value"].idxmin()
         ]
 
@@ -365,7 +364,8 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
         columns_idx = list(range(len(columns)))
         selected_features = list(filter(lambda idx: idx != init_worst_feature_index, columns_idx))
-        remaining_features = selected_features
+        remaining_features = list(filter(lambda idx: idx != init_worst_feature_index, columns_idx))
+        # TO DELETE
         not_dropped_features = []
         # print(f"columns indexes: {columns_idx}")
 
@@ -378,27 +378,31 @@ class BackwardStepwiseSelection(StepwiseSelection):
             # print(f"selected features: {selected_features}")
             # print(f"remaining features: {remaining_features}")
 
-            feature, score = self.feature_criterion_eval(X_train,
+            """feature, score = self.feature_criterion_eval(X_train,
                                                          y_train,
                                                          selected_features,
-                                                         not_dropped_features)
+                                                         not_dropped_features)"""
 
             #  X_subset_with_best_feature_added = X_train[selected_features + [int(feature)]]
+            for feature in remaining_features:
 
-            best_model_score, selected_features, remaining_features, \
-                not_dropped_features = self.model_criterion_eval(y=y_train,
-                                                                 X_train=X_train,
-                                                                 best_model_score=best_model_score,
-                                                                 selected_features=selected_features,
-                                                                 remaining_features=remaining_features,
-                                                                 not_dropped_features=not_dropped_features,
-                                                                 feature=feature)
+                best_model_score, selected_features, remaining_features, \
+                    not_dropped_features = self.model_criterion_eval(y=y_train,
+                                                                     X_train=X_train,
+                                                                     best_model_score=best_model_score,
+                                                                     selected_features=selected_features,
+                                                                     remaining_features=remaining_features,
+                                                                     not_dropped_features=not_dropped_features,
+                                                                     feature=feature)
 
             # print(selected_features)
             # print(best_model_score)
 
             # print(f"selected_features: {selected_features}")
         # return X_train, X_test, y_train, y_test
+        print(self.logs_df)
+        print(self.logs_df['Model_criterion_value'])
+
         return X_train, X_test, y_train, y_test, self.logs_df["Selected_features"].loc[
             self.logs_df["Model_criterion_value"].idxmax() if self.logs_df["Model_criterion"].iloc[
                                                                   0] == "pseudo_R_square"
@@ -467,8 +471,15 @@ class BackwardStepwiseSelection(StepwiseSelection):
                              feature,
                              ):
 
-        test_feature_set = list(filter(lambda idx: idx != feature, selected_features))
+        if len(remaining_features) > 1:
+            test_feature_set = list(filter(lambda idx: idx != feature, remaining_features))
+            print(f"test features set: {test_feature_set}")
+            print(f"remaining features set: {remaining_features}")
+        else:
+            remaining_features.clear()
 
+            print(f"remaining features set: {remaining_features}")
+            return best_model_score, selected_features, remaining_features, not_dropped_features
         # print(f"mc features set: {test_feature_set}")
 
         model_criterion_val = super().count_model_criterion(X_train,
@@ -485,11 +496,14 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
                 super().append_log(self.model_criterion,
                                    model_criterion_val,
-                                   selected_features)
+                                   remaining_features)
+
             else:
                 print('Cannot select better subset using AIC')
                 remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
                 not_dropped_features.append(feature)
+
+
 
         elif self.model_criterion == "BIC":
 
@@ -501,12 +515,13 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
                 super().append_log(self.model_criterion,
                                    model_criterion_val,
-                                   selected_features)
+                                   remaining_features)
 
             else:
                 print('Cannot select better subset using BIC')
                 remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
                 not_dropped_features.append(feature)
+
 
         elif self.model_criterion == "pseudo_R_square":
 
@@ -519,10 +534,12 @@ class BackwardStepwiseSelection(StepwiseSelection):
 
                 selected_features = test_feature_set
                 remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
-
+                print(remaining_features)
                 super().append_log(self.model_criterion,
                                    model_criterion_val,
-                                   selected_features)
+                                   remaining_features)
+
+
             else:
                 print('Cannot select better subset using pseudo R-square')
                 remaining_features = list(filter(lambda idx: idx != feature, remaining_features))
@@ -572,7 +589,7 @@ class Lasso:
                                           df_pre_split: pd.DataFrame() = None,
                                           pre_split=None):
         metrics_calculator = SelectedMetrics()
-
+        print(len(df.columns))
         X_train, X_test, y_train, y_test = DataSplitter().split_data(data_set=df,
                                                                      data_set_if_pre=df_pre_split,
                                                                      pre_split=pre_split)
@@ -676,12 +693,19 @@ class BruteForce:
     def select_subset(self,
                       df: pd.DataFrame(),
                       df_pre_split: pd.DataFrame() = None,
-                      pre_split=False
+                      pre_split: bool = False
                       ):
+
+        # print(df['y'].value_counts())
+
         X_train, X_test, y_train, y_test = DataSplitter().split_data(data_set=df,
                                                                      data_set_if_pre=df_pre_split,
                                                                      pre_split=pre_split)
 
+        # print(X_train.shape)
+        # print(y_train.shape)
+        # print(X_test.shape)
+        # print(y_test.shape)
         model = sm.Logit(y_train, X_train)
         result = model.fit(disp=False)
 

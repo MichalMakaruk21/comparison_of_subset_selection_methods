@@ -1,3 +1,5 @@
+import random
+
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, Normalizer
@@ -84,6 +86,11 @@ class DataSet2(DataSet):
 
     def preprocess_data(self, scaler_type: str) -> pd.DataFrame():
         data = self.read_data()
+
+        # data = data[data.nunique()[data.nunique() > 1].index]
+        # data = data.drop(np.random.choice(data[data['class'] == 0].index, 6741, replace=False))
+        # data = data.loc[data.nunique(axis=1)[data.nunique(axis=1) > 1].index]
+
         X = data.drop('class', axis=1)
         y = data['class']
 
@@ -101,7 +108,7 @@ class DataSet2(DataSet):
 
         scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X)
-        print(f"pre_return y : {y}")
+        # print(f"pre_return y : {y}")
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X.columns)
 
         return df
@@ -220,13 +227,18 @@ class DataSet4(DataSet):
 
         X = X.drop(['divdends_from_stocks', 'region_of_previous_residence',
                     'state_of_previous_residence', 'country_of_birth_father', 'country_of_birth_mother',
-                    'country_of_birth_self', 'fill_inc_questionnaire_for_veterans_admin'], axis=1)
+                    'country_of_birth_self', 'fill_inc_questionnaire_for_veterans_admin', 'industry_code',
+                    'occupation_code', 'enrolled_in_edu_inst_last_wk', 'member_of_a_labor_union',
+                    'reason_for_unemployment', 'state_of_previous_residence', 'hispanic_Origin',
+                    'detailed_household_and_family_stat','migration_code_change_in_msa',
+                    'migration_code_change_in_reg'], axis=1)
 
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
         scaler = ScalerSelector().get_scaler(scaler_type=scaler_type)
         X_scaled = scaler.fit_transform(X_dummy)
 
         df = ScaledDataFrameBuilder().get_df_from_preprocess_data(x_scaled=X_scaled, y=y, columns=X_dummy.columns)
+        print(len(X.columns))
         print('preprocess_finished')
         return df
 
@@ -245,7 +257,11 @@ class DataSet4(DataSet):
 
         X = X.drop(['divdends_from_stocks', 'region_of_previous_residence',
                     'state_of_previous_residence', 'country_of_birth_father', 'country_of_birth_mother',
-                    'country_of_birth_self', 'fill_inc_questionnaire_for_veterans_admin'], axis=1)
+                    'country_of_birth_self', 'fill_inc_questionnaire_for_veterans_admin', 'industry_code',
+                    'occupation_code', 'enrolled_in_edu_inst_last_wk', 'member_of_a_labor_union',
+                    'reason_for_unemployment', 'state_of_previous_residence', 'hispanic_Origin',
+                    'detailed_household_and_family_stat', 'migration_code_change_in_msa',
+                    'migration_code_change_in_reg'], axis=1)
 
         X_dummy = pd.get_dummies(X, dummy_na=False, drop_first=True)
 
